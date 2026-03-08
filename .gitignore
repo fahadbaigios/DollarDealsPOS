@@ -1,0 +1,89 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Dart/Flutter build runner
+build_runner/
+
+# Flutter specific
+.flutter/
+.flutter_build/
+
+# Logs
+*.log
+
+# IDE files
+
+## VS Code
+.vscode/
+
+## IntelliJ / Android Studio
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# Database files (important for POS)
+
+# SQLite database
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# POS backups
+backups/
+*.backup
+*.bak
+
+# Large exported files
+
+# PDF exports
+exports/
+*.pdf
+
+# CSV exports
+*.csv
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Flutter test artifacts
+coverage/
+
+# Misc
+.env
+.env.*
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio build artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
