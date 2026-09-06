@@ -2,6 +2,12 @@ name: Build Windows Installer
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/windows-installer.yml
+      - installer/windows_installer.iss
 
 permissions:
   contents: read
