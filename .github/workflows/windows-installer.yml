@@ -1,0 +1,93 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install pinned Flutter SDK
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch 3.47.2 `
+            https://github.com/flutter/flutter.git C:\flutter
+
+          $expectedCommit = "d3b14c876900e553bc736ca19295fc09e3853e8e"
+          $actualCommit = (git -C C:\flutter rev-parse HEAD).Trim()
+          if ($actualCommit -ne $expectedCommit) {
+            throw "Unexpected Flutter revision: $actualCommit"
+          }
+
+          "C:\flutter\bin" |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Verify Flutter and enable Windows desktop
+        shell: pwsh
+        run: |
+          flutter --version
+          flutter config --enable-windows-desktop
+
+      - name: Resolve locked dependencies
+        run: flutter pub get
+
+      - name: Generate Drift database code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Verify application output
+        shell: pwsh
+        run: |
+          $app = "build\windows\x64\runner\Release\one_dollar_deals_inventory_system.exe"
+          if (-not (Test-Path $app)) {
+            throw "Expected release executable was not generated: $app"
+          }
+
+      - name: Download and verify Microsoft Visual C++ runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" `
+            -OutFile "installer/vc_redist.x64.exe"
+
+          $signature = Get-AuthenticodeSignature "installer/vc_redist.x64.exe"
+          if ($signature.Status -ne "Valid" -or
+              $signature.SignerCertificate.Subject -notmatch "Microsoft") {
+            throw "Microsoft runtime signature validation failed"
+          }
+
+      - name: Build installer with preinstalled Inno Setup
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            throw "Preinstalled Inno Setup compiler was not found: $compiler"
+          }
+          & $compiler "installer\windows_installer.iss"
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash "dist\DollarDealsPOS-Setup.exe" -Algorithm SHA256
+          "$($hash.Hash)  DollarDealsPOS-Setup.exe" |
+            Out-File "dist\SHA256.txt" -Encoding ascii
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: DollarDealsPOS-Windows-Installer
+          path: |
+            dist/DollarDealsPOS-Setup.exe
+            dist/SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
