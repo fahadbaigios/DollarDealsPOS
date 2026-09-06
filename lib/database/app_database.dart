@@ -7,6 +7,8 @@ import 'tables/categories_table.dart';
 import 'tables/customers_table.dart';
 import 'tables/expense_categories_table.dart';
 import 'tables/expenses_table.dart';
+import 'tables/held_cart_items_table.dart';
+import 'tables/held_carts_table.dart';
 import 'tables/inventory_transactions_table.dart';
 import 'tables/payment_methods_table.dart';
 import 'tables/products_table.dart';
@@ -42,13 +44,15 @@ part 'app_database.g.dart';
     Receipts,
     BusinessSettings,
     PrinterSettings,
+    HeldCarts,
+    HeldCartItems,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(createDatabaseConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +96,24 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 7) {
             await m.createTable(printerSettings);
+          }
+          if (from < 8) {
+            await m.createTable(heldCarts);
+            await m.createTable(heldCartItems);
+          }
+          if (from < 9) {
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items (sale_id);',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items (product_id);',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses (expense_date);',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_inventory_transactions_created_at ON inventory_transactions (created_at);',
+            );
           }
         },
       );

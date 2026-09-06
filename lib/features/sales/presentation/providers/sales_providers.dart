@@ -4,15 +4,22 @@ import '../../../../core/services/database_provider.dart';
 import '../../../../database/app_database.dart';
 import '../../../products/presentation/providers/products_providers.dart';
 import '../../data/repositories/customers_repository.dart';
+import '../../data/repositories/held_carts_repository.dart';
 import '../../data/repositories/payment_methods_repository.dart';
 import '../../data/repositories/sales_repository.dart';
 import '../../data/repositories/users_repository.dart';
 import '../../domain/models/cart_item.dart';
+import '../../domain/models/held_cart_summary.dart';
+import '../../domain/models/sales_history_page_result.dart';
 import '../../domain/services/pos_scanner_service.dart';
 import '../../domain/services/sales_checkout_service.dart';
 
 final salesRepositoryProvider = Provider<SalesRepository>((ref) {
-  return SalesRepository(ref.watch(databaseProvider));
+  return SalesRepository(
+    ref.watch(databaseProvider),
+    ref.watch(customersRepositoryProvider),
+    ref.watch(usersRepositoryProvider),
+  );
 });
 
 final salesCheckoutServiceProvider = Provider<SalesCheckoutService>((ref) {
@@ -38,6 +45,14 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
   return UsersRepository(ref.watch(databaseProvider));
 });
 
+final heldCartsRepositoryProvider = Provider<HeldCartsRepository>((ref) {
+  return HeldCartsRepository(ref.watch(databaseProvider));
+});
+
+final heldCartsListProvider = StreamProvider.autoDispose<List<HeldCartSummary>>((ref) {
+  return ref.watch(heldCartsRepositoryProvider).watchAll();
+});
+
 final currentCashierProvider = FutureProvider.autoDispose<User?>((ref) {
   return ref.watch(usersRepositoryProvider).getFirstActiveUser();
 });
@@ -52,25 +67,24 @@ final activePaymentMethodsProvider = FutureProvider.autoDispose<List<PaymentMeth
 
 final posProductSearchQueryProvider = StateProvider<String>((ref) => '');
 
-final posProductSearchResultsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
+final posProductSearchResultsProvider = FutureProvider.autoDispose<List<Product>>((ref) {
   final query = ref.watch(posProductSearchQueryProvider);
   final productsRepo = ref.watch(productsRepositoryProvider);
-  final products = await productsRepo.getAll();
-  if (query.trim().isEmpty) {
-    return products.where((p) => p.isActive).toList();
-  }
-  final q = query.trim().toLowerCase();
-  return products.where((p) {
-    if (!p.isActive) return false;
-    if (p.name.toLowerCase().contains(q)) return true;
-    if (p.sku.toLowerCase().contains(q)) return true;
-    if (p.barcode != null && p.barcode!.toLowerCase().contains(q)) return true;
-    return false;
-  }).toList();
+  return productsRepo.getFiltered(
+    searchQuery: query.trim().isEmpty ? null : query,
+    isActive: true,
+    limit: 200,
+  );
 });
 
 class CartNotifier extends StateNotifier<List<CartItem>> {
   CartNotifier() : super([]);
+
+  /// Replaces the entire cart contents at once (used when resuming a held
+  /// cart).
+  void loadItems(List<CartItem> items) {
+    state = items;
+  }
 
   void addItem(CartItem item) {
     final idx = state.indexWhere((i) => i.product.id == item.product.id);
@@ -145,20 +159,50 @@ final dueAmountProvider = Provider<double>((ref) {
 });
 
 final salesHistorySearchQueryProvider = StateProvider<String>((ref) => '');
-final salesHistoryDateFromProvider = StateProvider<DateTime?>((ref) => null);
-final salesHistoryDateToProvider = StateProvider<DateTime?>((ref) => null);
 
-final salesStreamProvider = StreamProvider.autoDispose<List<Sale>>((ref) {
-  final repo = ref.watch(salesRepositoryProvider);
+DateTime _today() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
+
+/// Sales history opens on today's sales instead of querying all historical
+/// records. Users can still select another range with the From/To filters.
+final salesHistoryDateFromProvider =
+    StateProvider<DateTime?>((ref) => _today());
+final salesHistoryDateToProvider =
+    StateProvider<DateTime?>((ref) => _today());
+const salesHistoryPageSize = 50;
+final salesHistoryPageProvider = StateProvider<int>((ref) => 0);
+
+final salesHistoryPaginatedProvider =
+    FutureProvider.autoDispose<SalesHistoryPageResult>((ref) {
   final query = ref.watch(salesHistorySearchQueryProvider);
   final from = ref.watch(salesHistoryDateFromProvider);
   final to = ref.watch(salesHistoryDateToProvider);
-  return repo.search(
-    query: query.isEmpty ? null : query,
-    from: from,
-    to: to,
-  );
+  final page = ref.watch(salesHistoryPageProvider);
+
+  return ref.watch(salesRepositoryProvider).searchPaginated(
+        query: query.isEmpty ? null : query,
+        from: from,
+        to: to,
+        page: page,
+        pageSize: salesHistoryPageSize,
+      );
 });
+
+/// Resets sales history to page 0 (call when filters change).
+void resetSalesHistoryPage(WidgetRef ref) {
+  ref.read(salesHistoryPageProvider.notifier).state = 0;
+}
+
+/// Restores the history filters to their default: today's sales, first page.
+void resetSalesHistoryToToday(WidgetRef ref) {
+  final today = _today();
+  ref.read(salesHistorySearchQueryProvider.notifier).state = '';
+  ref.read(salesHistoryDateFromProvider.notifier).state = today;
+  ref.read(salesHistoryDateToProvider.notifier).state = today;
+  resetSalesHistoryPage(ref);
+}
 
 final saleDetailProvider =
     FutureProvider.autoDispose.family<Sale?, int>((ref, id) async {

@@ -148,6 +148,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ref.read(posCustomerIdProvider.notifier).state = null;
       ref.read(posPaymentMethodIdProvider.notifier).state = null;
       _barcodeController.clear();
+      _searchController.clear();
+      ref.read(posProductSearchQueryProvider.notifier).state = '';
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -188,6 +190,265 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _holdCart() async {
+    final cart = ref.read(cartProvider);
+    if (cart.isEmpty) return;
+
+    final controller = TextEditingController();
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hold Cart'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Note (optional, e.g. customer name)',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Hold'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (label == null) return;
+    if (!mounted) return;
+
+    try {
+      await ref.read(heldCartsRepositoryProvider).holdCart(
+            items: cart,
+            label: label,
+            customerId: ref.read(posCustomerIdProvider),
+            paymentMethodId: ref.read(posPaymentMethodIdProvider),
+            orderDiscount: ref.read(posOrderDiscountProvider),
+          );
+
+      ref.read(cartProvider.notifier).clear();
+      ref.read(posOrderDiscountProvider.notifier).state = 0;
+      ref.read(posPaidAmountProvider.notifier).state = 0;
+      ref.read(posCustomerIdProvider.notifier).state = null;
+      ref.read(posPaymentMethodIdProvider.notifier).state = null;
+      _barcodeController.clear();
+      _searchController.clear();
+      ref.read(posProductSearchQueryProvider.notifier).state = '';
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cart put on hold')),
+      );
+      _focusBarcodeField();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to hold cart: $e')),
+      );
+    }
+  }
+
+  Future<void> _showHeldCartsDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Held Carts'),
+        content: SizedBox(
+          width: 440,
+          child: Consumer(
+            builder: (context, ref, _) {
+              final heldAsync = ref.watch(heldCartsListProvider);
+              return heldAsync.when(
+                data: (held) {
+                  if (held.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(child: Text('No carts on hold.')),
+                    );
+                  }
+                  return SizedBox(
+                    height: 320,
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: held.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final h = held[i];
+                        final subtitle = [
+                          '${h.itemCount} item${h.itemCount == 1 ? '' : 's'}',
+                          if (h.customerName != null) h.customerName!,
+                          '\$${h.totalAmount.toStringAsFixed(2)}',
+                        ].join(' • ');
+                        return ListTile(
+                          title: Text(h.label),
+                          subtitle: Text(subtitle),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Discard',
+                                onPressed: () => _discardHeldCart(h.id, h.label),
+                              ),
+                              FilledButton(
+                                onPressed: () {
+                                  Navigator.of(dialogCtx).pop();
+                                  _resumeHeldCart(h.id);
+                                },
+                                child: const Text('Resume'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, st) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text('Error: $e'),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _discardHeldCart(int id, String label) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Discard Held Cart'),
+        content: Text('Discard "$label"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(heldCartsRepositoryProvider).delete(id);
+    }
+  }
+
+  Future<void> _resumeHeldCart(int heldCartId) async {
+    final currentCart = ref.read(cartProvider);
+
+    if (currentCart.isNotEmpty) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Current Cart Has Items'),
+          content: const Text(
+            'You have items in the current cart. What would you like to do before resuming the held cart?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('cancel'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop('discard'),
+              child: const Text('Discard Current'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop('hold'),
+              child: const Text('Hold Current & Resume'),
+            ),
+          ],
+        ),
+      );
+
+      if (action == null || action == 'cancel') return;
+      if (!mounted) return;
+
+      if (action == 'hold') {
+        try {
+          await ref.read(heldCartsRepositoryProvider).holdCart(
+                items: currentCart,
+                customerId: ref.read(posCustomerIdProvider),
+                paymentMethodId: ref.read(posPaymentMethodIdProvider),
+                orderDiscount: ref.read(posOrderDiscountProvider),
+              );
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to hold current cart: $e')),
+          );
+          return;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    try {
+      final full = await ref.read(heldCartsRepositoryProvider).getFull(heldCartId);
+      if (full == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Held cart not found (it may have already been resumed).'),
+          ),
+        );
+        return;
+      }
+
+      ref.read(cartProvider.notifier).loadItems(full.items);
+      ref.read(posOrderDiscountProvider.notifier).state = full.orderDiscount;
+      ref.read(posCustomerIdProvider.notifier).state = full.customerId;
+      ref.read(posPaymentMethodIdProvider.notifier).state = full.paymentMethodId;
+      ref.read(posPaidAmountProvider.notifier).state = 0;
+
+      await ref.read(heldCartsRepositoryProvider).delete(heldCartId);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            full.skippedItemNames.isEmpty
+                ? 'Resumed "${full.label}"'
+                : 'Resumed "${full.label}". ${full.skippedItemNames.length} item(s) were removed (no longer available).',
+          ),
+        ),
+      );
+      _focusBarcodeField();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to resume cart: $e')),
       );
     }
   }
@@ -346,6 +607,24 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                       ),
                                 ),
                               ),
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final heldAsync = ref.watch(heldCartsListProvider);
+                                  final count = heldAsync.maybeWhen(
+                                    data: (l) => l.length,
+                                    orElse: () => 0,
+                                  );
+                                  return TextButton.icon(
+                                    onPressed: _showHeldCartsDialog,
+                                    icon: Badge(
+                                      label: Text('$count'),
+                                      isLabelVisible: count > 0,
+                                      child: const Icon(Icons.pause_circle_outline, size: 18),
+                                    ),
+                                    label: const Text('Held'),
+                                  );
+                                },
+                              ),
                               if (cart.isNotEmpty)
                                 TextButton.icon(
                                   onPressed: _clearCart,
@@ -426,12 +705,30 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             error: (_, __) => const SizedBox(),
                           ),
                           const SizedBox(height: 16),
-                          FilledButton(
-                            onPressed: cart.isEmpty ? null : _completeSale,
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: const Text('Complete Sale'),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: cart.isEmpty ? null : _holdCart,
+                                  icon: const Icon(Icons.pause_circle_outline),
+                                  label: const Text('Hold Cart'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: FilledButton(
+                                  onPressed: cart.isEmpty ? null : _completeSale,
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                  ),
+                                  child: const Text('Complete Sale'),
+                                ),
+                              ),
+                            ],
                           ),
                           ],
                         ),
@@ -597,6 +894,7 @@ class _TotalsSection extends ConsumerWidget {
             _Row('Total', total, bold: true),
             const SizedBox(height: 12),
             TextFormField(
+              key: ValueKey('paid_$paid'),
               initialValue: paid == 0 ? '' : paid.toStringAsFixed(2),
               decoration: const InputDecoration(
                 labelText: 'Paid Amount',

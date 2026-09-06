@@ -17,6 +17,7 @@ import '../../features/reports/presentation/screens/low_stock_report_screen.dart
 import '../../features/reports/presentation/screens/profit_loss_report_screen.dart';
 import '../../features/reports/presentation/screens/purchase_report_screen.dart';
 import '../../features/reports/presentation/screens/sales_report_screen.dart';
+import '../../features/settings/presentation/screens/database_maintenance_screen.dart';
 import '../../features/settings/presentation/screens/backup_restore_screen.dart';
 import '../../features/settings/presentation/screens/business_profile_screen.dart';
 import '../../features/settings/presentation/screens/printer_settings_screen.dart';
@@ -209,6 +210,14 @@ final GoRouter appRouter = GoRouter(
               pageBuilder: (context, state) => _buildPage(
                 state: state,
                 child: const BackupRestoreScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'database',
+              name: RouteNames.databaseMaintenance,
+              pageBuilder: (context, state) => _buildPage(
+                state: state,
+                child: const DatabaseMaintenanceScreen(),
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'expense_categories_table.dart';
 import 'payment_methods_table.dart';
 import 'users_table.dart';
 
+@TableIndex(name: 'idx_expenses_expense_date', columns: {#expenseDate})
 class Expenses extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text().withDefault(const Constant('Expense'))();

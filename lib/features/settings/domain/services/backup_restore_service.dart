@@ -30,11 +30,23 @@ class RestoreResult {
 
 /// Service for database backup and restore.
 class BackupRestoreService {
-  BackupRestoreService(this._getDbPath, this._onBeforeRestore, this._onAfterRestore);
+  BackupRestoreService(
+    this._getDbPath,
+    this._onBeforeRestore,
+    this._onAfterRestore, {
+    required Future<void> Function() onBeforeBackup,
+  }) : _onBeforeBackup = onBeforeBackup;
 
   final Future<String> Function() _getDbPath;
   final Future<void> Function() _onBeforeRestore;
   final Future<void> Function() _onAfterRestore;
+
+  /// Called right before copying the DB file for a backup. Must flush the
+  /// SQLite WAL file into the main database file (checkpoint), otherwise
+  /// recently committed data (e.g. the last few sales) can live only in
+  /// the separate `-wal` sidecar file and be silently missing from a plain
+  /// file copy since the DB is enabled with WAL journaling for performance.
+  final Future<void> Function() _onBeforeBackup;
 
   /// Creates backup filename: pos-backup-2026-03-08-14-30.sqlite
   static String backupFileName() {
@@ -51,6 +63,8 @@ class BackupRestoreService {
   /// Saves to app documents/backups/ folder.
   Future<BackupResult> createBackup() async {
     try {
+      await _onBeforeBackup();
+
       final dbPath = await _getDbPath();
       final dbFile = File(dbPath);
       if (!await dbFile.exists()) {
@@ -73,6 +87,8 @@ class BackupRestoreService {
   /// Creates a backup to a user-selected path (caller provides the path).
   Future<BackupResult> createBackupToPath(String destPath) async {
     try {
+      await _onBeforeBackup();
+
       final dbPath = await _getDbPath();
       final dbFile = File(dbPath);
       if (!await dbFile.exists()) {
@@ -101,6 +117,15 @@ class BackupRestoreService {
       final dbPath = await _getDbPath();
 
       await _onBeforeRestore();
+
+      // Clear any leftover WAL/SHM sidecar files at the destination so
+      // they can't shadow the freshly restored main database file.
+      for (final suffix in ['-wal', '-shm', '-journal']) {
+        final sidecar = File('$dbPath$suffix');
+        if (await sidecar.exists()) {
+          await sidecar.delete();
+        }
+      }
 
       await backupFile.copy(dbPath);
 

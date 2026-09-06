@@ -24,6 +24,7 @@ class RouteNames {
   static const String printerSettings = 'printerSettings';
   static const String systemPreferences = 'systemPreferences';
   static const String backupRestore = 'backupRestore';
+  static const String databaseMaintenance = 'databaseMaintenance';
 
   static const String root = '/';
   static const String dashboardPath = '/dashboard';
@@ -48,4 +49,5 @@ class RouteNames {
   static const String printerSettingsPath = '/settings/printer';
   static const String systemPreferencesPath = '/settings/preferences';
   static const String backupRestorePath = '/settings/backup';
+  static const String databaseMaintenancePath = '/settings/database';
 }

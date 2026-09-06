@@ -7,6 +7,7 @@ import '../../data/repositories/settings_repository.dart';
 import '../../domain/models/business_profile_settings.dart';
 import '../../domain/models/system_preferences.dart';
 import '../../domain/services/backup_restore_service.dart';
+import '../../domain/services/database_maintenance_service.dart';
 
 final businessSettingsRepositoryProvider = Provider<BusinessSettingsRepository>((ref) {
   return BusinessSettingsRepository(ref.watch(databaseProvider));
@@ -51,10 +52,21 @@ final backupRestoreServiceProvider = Provider<BackupRestoreService>((ref) {
     () async {
       ref.invalidate(databaseProvider);
     },
+    onBeforeBackup: () async {
+      final db = ref.read(databaseProvider);
+      // Flush WAL contents into the main file so the plain file copy
+      // below captures every committed transaction.
+      await db.customStatement('PRAGMA wal_checkpoint(TRUNCATE);');
+    },
   );
 });
 
 final backupListProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   final service = ref.watch(backupRestoreServiceProvider);
   return service.listBackups();
+});
+
+final databaseMaintenanceServiceProvider =
+    Provider<DatabaseMaintenanceService>((ref) {
+  return DatabaseMaintenanceService(ref.watch(databaseProvider));
 });

@@ -26,41 +26,51 @@ class DashboardRepository {
     return (start, end);
   }
 
-  /// Revenue = sum of sales.total_amount in date range. = sum of sales.total_amount in date range.
+  Expression<bool> _salesInRange(DateTime from, DateTime to) {
+    return _db.sales.saleDate.isBiggerOrEqualValue(from) &
+        _db.sales.saleDate.isSmallerOrEqualValue(to);
+  }
+
+  Expression<bool> _expensesInRange(DateTime from, DateTime to) {
+    return _db.expenses.expenseDate.isBiggerOrEqualValue(from) &
+        _db.expenses.expenseDate.isSmallerOrEqualValue(to);
+  }
+
+  /// Revenue = sum of sales.total_amount in date range.
   Future<double> getSalesTotal(DateTime from, DateTime to) async {
-    final rows = await (_db.select(_db.sales)
-          ..where((t) =>
-              t.saleDate.isBiggerOrEqualValue(from) &
-              t.saleDate.isSmallerOrEqualValue(to)))
-        .get();
-    return rows.fold<double>(0.0, (sum, s) => sum + s.totalAmount);
+    final sumExpr = _db.sales.totalAmount.sum();
+    final row = await (_db.selectOnly(_db.sales)
+          ..addColumns([sumExpr])
+          ..where(_salesInRange(from, to)))
+        .getSingleOrNull();
+    return row?.read(sumExpr) ?? 0.0;
   }
 
   /// COGS = sum of (sale_items.unit_cost * sale_items.quantity) for sales in range.
   Future<double> getCogs(DateTime from, DateTime to) async {
-    final rows = await (_db.selectOnly(_db.sales)
-          ..addColumns([_db.sales.id])
-          ..where(_db.sales.saleDate.isBiggerOrEqualValue(from) &
-              _db.sales.saleDate.isSmallerOrEqualValue(to)))
-        .get();
-    final saleIds = rows.map((r) => r.read(_db.sales.id)).whereType<int>().toList();
-
-    if (saleIds.isEmpty) return 0.0;
-
-    final items = await (_db.select(_db.saleItems)
-          ..where((t) => t.saleId.isIn(saleIds)))
-        .get();
-    return items.fold<double>(0.0, (sum, i) => sum + (i.unitCost * i.quantity));
+    final lineCost = _db.saleItems.unitCost * _db.saleItems.quantity;
+    final sumExpr = lineCost.sum();
+    final row = await (_db.selectOnly(_db.saleItems)
+          ..addColumns([sumExpr])
+          ..join([
+            innerJoin(
+              _db.sales,
+              _db.sales.id.equalsExp(_db.saleItems.saleId),
+            ),
+          ])
+          ..where(_salesInRange(from, to)))
+        .getSingleOrNull();
+    return row?.read(sumExpr) ?? 0.0;
   }
 
   /// Expenses = sum of expenses.amount in date range.
   Future<double> getExpensesTotal(DateTime from, DateTime to) async {
-    final rows = await (_db.select(_db.expenses)
-          ..where((t) =>
-              t.expenseDate.isBiggerOrEqualValue(from) &
-              t.expenseDate.isSmallerOrEqualValue(to)))
-        .get();
-    return rows.fold<double>(0.0, (sum, e) => sum + e.amount);
+    final sumExpr = _db.expenses.amount.sum();
+    final row = await (_db.selectOnly(_db.expenses)
+          ..addColumns([sumExpr])
+          ..where(_expensesInRange(from, to)))
+        .getSingleOrNull();
+    return row?.read(sumExpr) ?? 0.0;
   }
 
   Future<double> getTodaySalesTotal() async {
@@ -128,19 +138,19 @@ class DashboardRepository {
   Future<List<({int productId, String name, double quantity, double revenue})>>
       getTopSellingProducts({int limit = 10}) async {
     final (from, to) = _monthRange;
-    final rows = await (_db.selectOnly(_db.sales)
-          ..addColumns([_db.sales.id])
-          ..where(_db.sales.saleDate.isBiggerOrEqualValue(from) &
-              _db.sales.saleDate.isSmallerOrEqualValue(to)))
-        .get();
-    final saleIds = rows.map((r) => r.read(_db.sales.id)).whereType<int>().toList();
 
-    if (saleIds.isEmpty) return [];
-
-    final items = await (_db.select(_db.saleItems)
-          ..where((t) => t.saleId.isIn(saleIds)))
+    final rows = await (_db.select(_db.saleItems).join([
+      innerJoin(
+        _db.sales,
+        _db.sales.id.equalsExp(_db.saleItems.saleId),
+      ),
+    ])
+          ..where(_salesInRange(from, to)))
         .get();
 
+    if (rows.isEmpty) return [];
+
+    final items = rows.map((r) => r.readTable(_db.saleItems)).toList();
     final productIds = items.map((i) => i.productId).toSet().toList();
     final products = await (_db.select(_db.products)
           ..where((t) => t.id.isIn(productIds)))
@@ -170,45 +180,50 @@ class DashboardRepository {
     }).toList();
   }
 
+  Expression<bool> get _lowStockCondition {
+    return _db.products.isActive.equals(true) &
+        _db.products.reorderLevel.isBiggerThanValue(0) &
+        _db.products.stockQuantity.isBiggerThanValue(0) &
+        _db.products.stockQuantity.isSmallerOrEqual(_db.products.reorderLevel);
+  }
+
   /// Count active products where stock <= reorder_level and stock > 0.
   Future<int> getLowStockCount() async {
-    final products = await (_db.select(_db.products)
-          ..where((t) => t.isActive.equals(true)))
-        .get();
-    return products
-        .where((p) =>
-            p.reorderLevel > 0 &&
-            p.stockQuantity > 0 &&
-            p.stockQuantity <= p.reorderLevel)
-        .length;
+    final countExpr = _db.products.id.count();
+    final row = await (_db.selectOnly(_db.products)
+          ..addColumns([countExpr])
+          ..where(_lowStockCondition))
+        .getSingle();
+    return row.read(countExpr) ?? 0;
   }
 
   Future<int> getOutOfStockCount() async {
-    final list = await (_db.select(_db.products)
-          ..where((t) =>
-              t.isActive.equals(true) &
-              t.stockQuantity.isSmallerOrEqualValue(0)))
-        .get();
-    return list.length;
+    final countExpr = _db.products.id.count();
+    final row = await (_db.selectOnly(_db.products)
+          ..addColumns([countExpr])
+          ..where(_db.products.isActive.equals(true) &
+              _db.products.stockQuantity.isSmallerOrEqualValue(0)))
+        .getSingle();
+    return row.read(countExpr) ?? 0;
   }
 
   Future<int> getTotalProductsCount() async {
-    final list = await _db.select(_db.products).get();
-    return list.length;
+    final countExpr = _db.products.id.count();
+    final row =
+        await (_db.selectOnly(_db.products)..addColumns([countExpr])).getSingle();
+    return row.read(countExpr) ?? 0;
   }
 
   /// Low stock products (stock <= reorder_level and stock > 0).
   Future<List<Product>> getLowStockProducts({int limit = 10}) async {
-    final products = await (_db.select(_db.products)
-          ..where((t) => t.isActive.equals(true)))
+    return (_db.select(_db.products)
+          ..where((t) =>
+              t.isActive.equals(true) &
+              t.reorderLevel.isBiggerThanValue(0) &
+              t.stockQuantity.isBiggerThanValue(0) &
+              t.stockQuantity.isSmallerOrEqual(t.reorderLevel))
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..limit(limit))
         .get();
-    final lowStock = products
-        .where((p) =>
-            p.reorderLevel > 0 &&
-            p.stockQuantity > 0 &&
-            p.stockQuantity <= p.reorderLevel)
-        .take(limit)
-        .toList();
-    return lowStock;
   }
 }

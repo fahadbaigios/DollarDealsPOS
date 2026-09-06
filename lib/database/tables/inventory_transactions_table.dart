@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'products_table.dart';
 
 @TableIndex(name: 'idx_inventory_transactions_product_id', columns: {#productId})
+@TableIndex(name: 'idx_inventory_transactions_created_at', columns: {#createdAt})
 class InventoryTransactions extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productId => integer().references(Products, #id)();

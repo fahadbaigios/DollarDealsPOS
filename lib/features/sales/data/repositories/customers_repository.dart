@@ -37,4 +37,10 @@ class CustomersRepository {
     return (_db.select(_db.customers)..where((t) => t.id.equals(id)))
         .getSingleOrNull();
   }
+
+  Future<List<Customer>> getByIds(Iterable<int> ids) async {
+    final idList = ids.toSet().toList();
+    if (idList.isEmpty) return [];
+    return (_db.select(_db.customers)..where((t) => t.id.isIn(idList))).get();
+  }
 }

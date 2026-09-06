@@ -42,6 +42,37 @@ class ProductsRepository {
     return (_db.select(_db.products)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
   }
 
+  /// SQL-filtered product list for POS and other screens that should not
+  /// load the entire products table into memory.
+  Future<List<Product>> getFiltered({
+    String? searchQuery,
+    int? categoryId,
+    bool? isActive,
+    int limit = 200,
+  }) async {
+    return (_db.select(_db.products)
+          ..where((t) {
+            Expression<bool> cond = const Constant(true);
+            if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+              final q = searchQuery.trim().toLowerCase();
+              cond = cond &
+                  (t.name.lower().like('%$q%') |
+                      t.sku.lower().like('%$q%') |
+                      (t.barcode.isNotNull() & t.barcode.like('%$q%')));
+            }
+            if (categoryId != null) {
+              cond = cond & t.categoryId.equals(categoryId);
+            }
+            if (isActive != null) {
+              cond = cond & t.isActive.equals(isActive);
+            }
+            return cond;
+          })
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..limit(limit))
+        .get();
+  }
+
   Future<Product?> getById(int id) async {
     return (_db.select(_db.products)..where((t) => t.id.equals(id))).getSingleOrNull();
   }

@@ -16,4 +16,10 @@ class UsersRepository {
     return (_db.select(_db.users)..where((t) => t.id.equals(id)))
         .getSingleOrNull();
   }
+
+  Future<List<User>> getByIds(Iterable<int> ids) async {
+    final idList = ids.toSet().toList();
+    if (idList.isEmpty) return [];
+    return (_db.select(_db.users)..where((t) => t.id.isIn(idList))).get();
+  }
 }

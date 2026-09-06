@@ -55,6 +55,12 @@ class SettingsHomeScreen extends ConsumerWidget {
                   subtitle: 'Backup database, restore from backup',
                   onTap: () => context.goNamed(RouteNames.backupRestore),
                 ),
+                _SettingsCard(
+                  icon: Icons.speed_outlined,
+                  title: 'Database Maintenance',
+                  subtitle: 'Optimize database (VACUUM + ANALYZE)',
+                  onTap: () => context.goNamed(RouteNames.databaseMaintenance),
+                ),
               ],
             ),
           ),

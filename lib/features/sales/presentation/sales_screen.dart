@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/pos_screen.dart';
 import 'screens/sales_history_screen.dart';
+import 'providers/sales_providers.dart';
 
 /// Main sales screen with POS and History tabs.
-class SalesScreen extends StatefulWidget {
+class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
 
   @override
-  State<SalesScreen> createState() => _SalesScreenState();
+  ConsumerState<SalesScreen> createState() => _SalesScreenState();
 }
 
-class _SalesScreenState extends State<SalesScreen> {
+class _SalesScreenState extends ConsumerState<SalesScreen> {
   int _selectedIndex = 0;
+  bool _historyInitialized = false;
+
+  void _selectHistory() {
+    // Refresh on every visit so a sale completed since the last visit appears
+    // immediately, while still avoiding the query before History is opened.
+    ref.invalidate(salesHistoryPaginatedProvider);
+    setState(() {
+      _historyInitialized = true;
+      _selectedIndex = 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +53,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 label: 'History',
                 icon: Icons.history,
                 selected: _selectedIndex == 1,
-                onTap: () => setState(() => _selectedIndex = 1),
+                onTap: _selectHistory,
               ),
             ],
           ),
@@ -48,9 +61,11 @@ class _SalesScreenState extends State<SalesScreen> {
         Expanded(
           child: IndexedStack(
             index: _selectedIndex,
-            children: const [
-              PosScreen(),
-              SalesHistoryScreen(),
+            children: [
+              const PosScreen(),
+              _historyInitialized
+                  ? const SalesHistoryScreen()
+                  : const SizedBox.shrink(),
             ],
           ),
         ),

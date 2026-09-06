@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../database/app_database.dart';
+import '../../domain/models/sales_history_page_result.dart';
 import '../providers/sales_providers.dart';
 import '../widgets/payment_status_badge.dart';
 import 'sale_details_screen.dart';
@@ -11,7 +11,7 @@ class SalesHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final salesAsync = ref.watch(salesStreamProvider);
+    final pageAsync = ref.watch(salesHistoryPaginatedProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -31,14 +31,16 @@ class SalesHistoryScreen extends ConsumerWidget {
               SizedBox(
                 width: 240,
                 child: TextField(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Search by invoice',
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
                     isDense: true,
                   ),
-                  onChanged: (v) =>
-                      ref.read(salesHistorySearchQueryProvider.notifier).state = v,
+                  onChanged: (v) {
+                    ref.read(salesHistorySearchQueryProvider.notifier).state = v;
+                    resetSalesHistoryPage(ref);
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -46,12 +48,14 @@ class SalesHistoryScreen extends ConsumerWidget {
                 onPressed: () async {
                   final from = await showDatePicker(
                     context: context,
-                    initialDate: ref.read(salesHistoryDateFromProvider) ?? DateTime.now(),
+                    initialDate:
+                        ref.read(salesHistoryDateFromProvider) ?? DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
                   );
                   if (from != null) {
                     ref.read(salesHistoryDateFromProvider.notifier).state = from;
+                    resetSalesHistoryPage(ref);
                   }
                 },
                 icon: const Icon(Icons.calendar_today, size: 18),
@@ -66,12 +70,14 @@ class SalesHistoryScreen extends ConsumerWidget {
                 onPressed: () async {
                   final to = await showDatePicker(
                     context: context,
-                    initialDate: ref.watch(salesHistoryDateToProvider) ?? DateTime.now(),
+                    initialDate:
+                        ref.watch(salesHistoryDateToProvider) ?? DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
                   );
                   if (to != null) {
                     ref.read(salesHistoryDateToProvider.notifier).state = to;
+                    resetSalesHistoryPage(ref);
                   }
                 },
                 icon: const Icon(Icons.calendar_today, size: 18),
@@ -83,20 +89,24 @@ class SalesHistoryScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               TextButton.icon(
-                onPressed: () {
-                  ref.read(salesHistorySearchQueryProvider.notifier).state = '';
-                  ref.read(salesHistoryDateFromProvider.notifier).state = null;
-                  ref.read(salesHistoryDateToProvider.notifier).state = null;
-                },
+                onPressed: () => resetSalesHistoryToToday(ref),
                 icon: const Icon(Icons.clear),
-                label: const Text('Clear'),
+                label: const Text('Today'),
               ),
             ],
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: salesAsync.when(
-              data: (sales) => _SalesTable(sales: sales),
+            child: pageAsync.when(
+              data: (page) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _SalesTable(page: page),
+                  ),
+                  if (page.totalCount > 0) _PaginationBar(page: page),
+                ],
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
@@ -107,19 +117,68 @@ class SalesHistoryScreen extends ConsumerWidget {
   }
 }
 
-class _SalesTable extends ConsumerWidget {
-  const _SalesTable({required this.sales});
+class _PaginationBar extends ConsumerWidget {
+  const _PaginationBar({required this.page});
 
-  final List<Sale> sales;
+  final SalesHistoryPageResult page;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          Text(
+            'Showing ${page.rangeStart}-${page.rangeEnd} of ${page.totalCount}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Page ${page.page + 1} of ${page.totalPages}',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: page.hasPreviousPage
+                ? () => ref.read(salesHistoryPageProvider.notifier).state =
+                    page.page - 1
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            label: const Text('Previous'),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: page.hasNextPage
+                ? () => ref.read(salesHistoryPageProvider.notifier).state =
+                    page.page + 1
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            label: const Text('Next'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SalesTable extends StatelessWidget {
+  const _SalesTable({required this.page});
+
+  final SalesHistoryPageResult page;
+
+  @override
+  Widget build(BuildContext context) {
+    final sales = page.sales;
     if (sales.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.receipt_long_outlined,
+                size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text('No sales found', style: TextStyle(color: Colors.grey.shade600)),
           ],
@@ -127,67 +186,46 @@ class _SalesTable extends ConsumerWidget {
       );
     }
 
-    return FutureBuilder<({Map<int, String> customerNames, Map<int, String> cashierNames})>(
-      future: () async {
-        final customersRepo = ref.read(customersRepositoryProvider);
-        final usersRepo = ref.read(usersRepositoryProvider);
-        final customerNames = <int, String>{};
-        final cashierNames = <int, String>{};
-        for (final s in sales) {
-          if (s.customerId != null) {
-            final c = await customersRepo.getById(s.customerId!);
-            customerNames[s.id] = c?.name ?? '-';
-          } else {
-            customerNames[s.id] = 'Walk-in';
-          }
-          final u = await usersRepo.getById(s.cashierId);
-          cashierNames[s.id] = u?.fullName ?? '-';
-        }
-        return (customerNames: customerNames, cashierNames: cashierNames);
-      }(),
-      builder: (context, snap) {
-        final customerNames = snap.data?.customerNames ?? {};
-        final cashierNames = snap.data?.cashierNames ?? {};
-
-        return Card(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Invoice')),
-                  DataColumn(label: Text('Date')),
-                  DataColumn(label: Text('Customer')),
-                  DataColumn(label: Text('Cashier')),
-                  DataColumn(label: Text('Total'), numeric: true),
-                  DataColumn(label: Text('Status')),
-                  DataColumn(label: Text('Action')),
-                ],
-                rows: sales.map((s) => DataRow(
-                  cells: [
-                    DataCell(Text(s.invoiceNumber)),
-                    DataCell(Text(_formatDate(s.saleDate))),
-                    DataCell(Text(customerNames[s.id] ?? '...')),
-                    DataCell(Text(cashierNames[s.id] ?? '...')),
-                    DataCell(Text('\$${s.totalAmount.toStringAsFixed(2)}')),
-                    DataCell(PaymentStatusBadge(status: s.paymentStatus, compact: true)),
-                    DataCell(
-                      TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (ctx) => SaleDetailsScreen(saleId: s.id),
-                          ),
+    return Card(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            columns: const [
+              DataColumn(label: Text('Invoice')),
+              DataColumn(label: Text('Date')),
+              DataColumn(label: Text('Customer')),
+              DataColumn(label: Text('Cashier')),
+              DataColumn(label: Text('Total'), numeric: true),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Action')),
+            ],
+            rows: sales.map((s) {
+              return DataRow(
+                cells: [
+                  DataCell(Text(s.invoiceNumber)),
+                  DataCell(Text(_formatDate(s.saleDate))),
+                  DataCell(Text(page.customerNamesBySaleId[s.id] ?? '-')),
+                  DataCell(Text(page.cashierNamesBySaleId[s.id] ?? '-')),
+                  DataCell(Text('\$${s.totalAmount.toStringAsFixed(2)}')),
+                  DataCell(
+                      PaymentStatusBadge(status: s.paymentStatus, compact: true)),
+                  DataCell(
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (ctx) => SaleDetailsScreen(saleId: s.id),
                         ),
-                        child: const Text('View'),
                       ),
+                      child: const Text('View'),
                     ),
-                  ],
-                )).toList(),
-              ),
-            ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
