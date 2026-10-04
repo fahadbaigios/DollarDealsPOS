@@ -51,86 +51,118 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(createDatabaseConnection());
 
+  /// Uses an isolated executor for repository tests.
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-          await _seedInitialData();
-        },
-        onUpgrade: (Migrator m, int from, int to) async {
-          if (from < 2) {
-            await m.addColumn(categories, categories.isActive);
-            await m.addColumn(products, products.taxRate);
-          }
-          if (from < 3) {
-            await m.addColumn(purchases, purchases.createdBy);
-            await m.addColumn(purchases, purchases.subtotal);
-            await m.addColumn(purchases, purchases.discountAmount);
-            await m.addColumn(purchases, purchases.otherCharges);
-            await m.addColumn(purchases, purchases.paidAmount);
-            await m.addColumn(purchases, purchases.dueAmount);
-            await m.addColumn(purchases, purchases.paymentStatus);
-            await m.addColumn(purchaseItems, purchaseItems.itemDiscount);
-            await m.addColumn(purchaseItems, purchaseItems.itemTax);
-          }
-          if (from < 4) {
-            await m.addColumn(sales, sales.paidAmount);
-            await m.addColumn(sales, sales.dueAmount);
-            await m.addColumn(sales, sales.paymentStatus);
-            await m.addColumn(saleItems, saleItems.itemDiscount);
-            await m.addColumn(saleItems, saleItems.itemTax);
-          }
-          if (from < 5) {
-            await m.addColumn(receipts, receipts.printedCount);
-            await m.addColumn(receipts, receipts.lastPrintedAt);
-          }
-          if (from < 6) {
-            await m.addColumn(expenses, expenses.title);
-            await m.addColumn(expenses, expenses.paymentMethodId);
-            await m.addColumn(expenses, expenses.notes);
-            await m.addColumn(expenses, expenses.createdBy);
-            // description already exists in v1-v5
-          }
-          if (from < 7) {
-            await m.createTable(printerSettings);
-          }
-          if (from < 8) {
-            await m.createTable(heldCarts);
-            await m.createTable(heldCartItems);
-          }
-          if (from < 9) {
-            await customStatement(
-              'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items (sale_id);',
-            );
-            await customStatement(
-              'CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items (product_id);',
-            );
-            await customStatement(
-              'CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses (expense_date);',
-            );
-            await customStatement(
-              'CREATE INDEX IF NOT EXISTS idx_inventory_transactions_created_at ON inventory_transactions (created_at);',
-            );
-          }
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      await _seedInitialData();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.addColumn(categories, categories.isActive);
+        await m.addColumn(products, products.taxRate);
+      }
+      if (from < 3) {
+        await m.addColumn(purchases, purchases.createdBy);
+        await m.addColumn(purchases, purchases.subtotal);
+        await m.addColumn(purchases, purchases.discountAmount);
+        await m.addColumn(purchases, purchases.otherCharges);
+        await m.addColumn(purchases, purchases.paidAmount);
+        await m.addColumn(purchases, purchases.dueAmount);
+        await m.addColumn(purchases, purchases.paymentStatus);
+        await m.addColumn(purchaseItems, purchaseItems.itemDiscount);
+        await m.addColumn(purchaseItems, purchaseItems.itemTax);
+      }
+      if (from < 4) {
+        await m.addColumn(sales, sales.paidAmount);
+        await m.addColumn(sales, sales.dueAmount);
+        await m.addColumn(sales, sales.paymentStatus);
+        await m.addColumn(saleItems, saleItems.itemDiscount);
+        await m.addColumn(saleItems, saleItems.itemTax);
+      }
+      if (from < 5) {
+        await m.addColumn(receipts, receipts.printedCount);
+        await m.addColumn(receipts, receipts.lastPrintedAt);
+      }
+      if (from < 6) {
+        await m.addColumn(expenses, expenses.title);
+        await m.addColumn(expenses, expenses.paymentMethodId);
+        await m.addColumn(expenses, expenses.notes);
+        await m.addColumn(expenses, expenses.createdBy);
+        // description already exists in v1-v5
+      }
+      if (from < 7) {
+        await m.createTable(printerSettings);
+      }
+      if (from < 8) {
+        await m.createTable(heldCarts);
+        await m.createTable(heldCartItems);
+      }
+      if (from < 9) {
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items (sale_id);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items (product_id);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses (expense_date);',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_inventory_transactions_created_at ON inventory_transactions (created_at);',
+        );
+      }
+      if (from < 10) {
+        await customStatement(
+          "UPDATE business_settings SET value = 'PKR' WHERE key = 'currency_code';",
+        );
+        await customStatement(
+          "INSERT INTO business_settings (key, value) SELECT 'currency_code', 'PKR' WHERE NOT EXISTS (SELECT 1 FROM business_settings WHERE key = 'currency_code');",
+        );
+        await customStatement(
+          "UPDATE business_settings SET value = 'PKR ' WHERE key = 'currency_symbol';",
+        );
+        await customStatement(
+          "INSERT INTO business_settings (key, value) SELECT 'currency_symbol', 'PKR ' WHERE NOT EXISTS (SELECT 1 FROM business_settings WHERE key = 'currency_symbol');",
+        );
+      }
+      if (from < 11) {
+        await customStatement(
+          "INSERT INTO payment_methods (name, is_active) SELECT 'JazzCash/Easypaisa', 1 WHERE NOT EXISTS (SELECT 1 FROM payment_methods WHERE lower(name) = lower('JazzCash/Easypaisa'));",
+        );
+      }
+    },
+  );
 
   /// Seeds default roles, payment methods, and expense categories.
   Future<void> _seedInitialData() async {
     await batch((batch) {
       batch.insertAll(roles, [
-        RolesCompanion.insert(name: 'Admin', description: const Value('Full system access')),
-        RolesCompanion.insert(name: 'Manager', description: const Value('Manage operations')),
-        RolesCompanion.insert(name: 'Cashier', description: const Value('POS and sales')),
+        RolesCompanion.insert(
+          name: 'Admin',
+          description: const Value('Full system access'),
+        ),
+        RolesCompanion.insert(
+          name: 'Manager',
+          description: const Value('Manage operations'),
+        ),
+        RolesCompanion.insert(
+          name: 'Cashier',
+          description: const Value('POS and sales'),
+        ),
       ]);
 
       batch.insertAll(paymentMethods, [
         PaymentMethodsCompanion.insert(name: 'Cash'),
         PaymentMethodsCompanion.insert(name: 'Card'),
         PaymentMethodsCompanion.insert(name: 'Bank Transfer'),
+        PaymentMethodsCompanion.insert(name: 'JazzCash/Easypaisa'),
       ]);
 
       batch.insertAll(expenseCategories, [
@@ -148,15 +180,21 @@ class AppDatabase extends _$AppDatabase {
       ]);
 
       batch.insertAll(categories, [
-        CategoriesCompanion.insert(name: 'General', description: const Value('Default category')),
+        CategoriesCompanion.insert(
+          name: 'General',
+          description: const Value('Default category'),
+        ),
       ]);
 
-      batch.insert(users, UsersCompanion.insert(
-        roleId: 1,
-        username: 'admin',
-        passwordHash: 'default',
-        fullName: 'Admin',
-      ));
+      batch.insert(
+        users,
+        UsersCompanion.insert(
+          roleId: 1,
+          username: 'admin',
+          passwordHash: 'default',
+          fullName: 'Admin',
+        ),
+      );
     });
   }
 

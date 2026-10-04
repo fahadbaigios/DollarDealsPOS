@@ -20,7 +20,8 @@ class ExpenseReportScreen extends ConsumerWidget {
     final reportAsync = ref.watch(expenseReportProvider);
     final expenseCategoriesAsync = ref.watch(reportExpenseCategoriesProvider);
 
-    final expenseCategoryOptions = expenseCategoriesAsync.valueOrNull
+    final expenseCategoryOptions =
+        expenseCategoriesAsync.valueOrNull
             ?.map((e) => (id: (e as ExpenseCategory).id, name: e.name))
             .toList() ??
         [];
@@ -49,14 +50,18 @@ class ExpenseReportScreen extends ConsumerWidget {
             ),
             ReportSummaryCard(
               title: 'Total Amount',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalAmount),
+              value: NumberFormat.currency(
+                symbol: 'PKR ',
+              ).format(r.totalAmount),
               icon: Icons.attach_money,
               iconColor: Colors.orange,
             ),
             if (r.largestExpense != null)
               ReportSummaryCard(
                 title: 'Largest Expense',
-                value: NumberFormat.currency(symbol: '\$').format(r.largestExpense!),
+                value: NumberFormat.currency(
+                  symbol: 'PKR ',
+                ).format(r.largestExpense!),
                 icon: Icons.trending_up,
               ),
           ],
@@ -78,7 +83,7 @@ class ExpenseReportScreen extends ConsumerWidget {
               icon: Icons.receipt_long,
             );
           }
-          final currencyFormat = NumberFormat.currency(symbol: '\$');
+          final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
           final dateFormat = DateFormat('yyyy-MM-dd');
           return DataTableCard(
             child: SingleChildScrollView(
@@ -94,16 +99,20 @@ class ExpenseReportScreen extends ConsumerWidget {
                     DataColumn(label: Text('Payment Method')),
                     DataColumn(label: Text('Reference')),
                   ],
-                  rows: result.rows.map((r) => DataRow(
-                        cells: [
-                          DataCell(Text(dateFormat.format(r.date))),
-                          DataCell(Text(r.title)),
-                          DataCell(Text(r.categoryName)),
-                          DataCell(Text(currencyFormat.format(r.amount))),
-                          DataCell(Text(r.paymentMethodName ?? '—')),
-                          DataCell(Text(r.referenceNumber ?? '—')),
-                        ],
-                      )).toList(),
+                  rows: result.rows
+                      .map(
+                        (r) => DataRow(
+                          cells: [
+                            DataCell(Text(dateFormat.format(r.date))),
+                            DataCell(Text(r.title)),
+                            DataCell(Text(r.categoryName)),
+                            DataCell(Text(currencyFormat.format(r.amount))),
+                            DataCell(Text(r.paymentMethodName ?? '—')),
+                            DataCell(Text(r.referenceNumber ?? '—')),
+                          ],
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

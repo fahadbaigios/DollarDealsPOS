@@ -12,7 +12,8 @@ class BusinessProfileScreen extends ConsumerStatefulWidget {
   const BusinessProfileScreen({super.key});
 
   @override
-  ConsumerState<BusinessProfileScreen> createState() => _BusinessProfileScreenState();
+  ConsumerState<BusinessProfileScreen> createState() =>
+      _BusinessProfileScreenState();
 }
 
 class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
@@ -37,8 +38,8 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     _phoneController = TextEditingController();
     _emailController = TextEditingController();
     _taxController = TextEditingController();
-    _currencyCodeController = TextEditingController(text: 'USD');
-    _currencySymbolController = TextEditingController(text: '\$');
+    _currencyCodeController = TextEditingController(text: 'PKR');
+    _currencySymbolController = TextEditingController(text: 'PKR ');
     _footerController = TextEditingController();
     _taxRateController = TextEditingController(text: '0');
   }
@@ -142,11 +143,11 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
       email: _emailController.text.trim(),
       ntmOrTaxNumber: _taxController.text.trim(),
       currencyCode: _currencyCodeController.text.trim().isEmpty
-          ? 'USD'
+          ? 'PKR'
           : _currencyCodeController.text.trim(),
       currencySymbol: _currencySymbolController.text.trim().isEmpty
-          ? '\$'
-          : _currencySymbolController.text.trim(),
+          ? 'PKR '
+          : '${_currencySymbolController.text.trim()} ',
       receiptFooter: _footerController.text.trim(),
       taxEnabled: _taxEnabled,
       defaultTaxRate: double.tryParse(_taxRateController.text) ?? 0,
@@ -155,9 +156,9 @@ class _BusinessProfileScreenState extends ConsumerState<BusinessProfileScreen> {
     await ref.read(settingsRepositoryProvider).saveBusinessProfile(profile);
     ref.invalidate(businessProfileSettingsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Business profile saved')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Business profile saved')));
     }
   }
 }
@@ -202,8 +203,9 @@ class _FormContent extends StatelessWidget {
               labelText: 'Business Name *',
               border: OutlineInputBorder(),
             ),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Business name is required' : null,
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Business name is required'
+                : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -286,7 +288,9 @@ class _FormContent extends StatelessWidget {
                   labelText: 'Default Tax Rate (%)',
                   border: OutlineInputBorder(),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (v) {
                   final rate = double.tryParse(v ?? '') ?? -1;
                   return rate < 0 ? 'Tax rate must be >= 0' : null;

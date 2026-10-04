@@ -15,7 +15,8 @@ class PurchasesListScreen extends ConsumerStatefulWidget {
   const PurchasesListScreen({super.key});
 
   @override
-  ConsumerState<PurchasesListScreen> createState() => _PurchasesListScreenState();
+  ConsumerState<PurchasesListScreen> createState() =>
+      _PurchasesListScreenState();
 }
 
 class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
@@ -54,7 +55,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
         ),
         Expanded(
           child: purchasesAsync.when(
-            data: (purchases) => _buildTable(context, ref, purchases, suppliersAsync),
+            data: (purchases) =>
+                _buildTable(context, ref, purchases, suppliersAsync),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
@@ -104,7 +106,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
     Purchase purchase,
     AsyncValue<List<Supplier>> suppliersAsync,
   ) {
-    final supplierName = suppliersAsync.valueOrNull
+    final supplierName =
+        suppliersAsync.valueOrNull
             ?.where((s) => s.id == purchase.supplierId)
             .map((s) => s.name)
             .firstOrNull ??
@@ -115,9 +118,9 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
         DataCell(Text(purchase.invoiceNumber ?? '—')),
         DataCell(Text(supplierName)),
         DataCell(Text(_formatDate(purchase.purchaseDate))),
-        DataCell(Text('\$${purchase.totalAmount.toStringAsFixed(2)}')),
-        DataCell(Text('\$${purchase.paidAmount.toStringAsFixed(2)}')),
-        DataCell(Text('\$${purchase.dueAmount.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${purchase.totalAmount.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${purchase.paidAmount.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${purchase.dueAmount.toStringAsFixed(2)}')),
         DataCell(PaymentStatusBadge(status: purchase.paymentStatus)),
         DataCell(
           IconButton(
