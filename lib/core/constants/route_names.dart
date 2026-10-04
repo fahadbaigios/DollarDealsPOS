@@ -33,6 +33,7 @@ class RouteNames {
   static const String purchaseDetailsPath = '/purchases/:id';
   static const String createPurchasePath = '/purchases/new';
   static const String salesPath = '/sales';
+  static const String salesHistoryPath = '/sales?tab=history';
   static const String saleDetailsPath = '/sales/:id';
   static const String inventoryPath = '/inventory';
   static const String expensesPath = '/expenses';

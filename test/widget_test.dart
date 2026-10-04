@@ -5,12 +5,8 @@ import 'package:one_dollar_deals_inventory_system/app/app.dart';
 
 void main() {
   testWidgets('App loads and shows dashboard', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: PosApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: PosApp()));
 
-    expect(find.text('Overview and quick stats will appear here'), findsOneWidget);
+    expect(find.text('Dashboard'), findsWidgets);
   });
 }

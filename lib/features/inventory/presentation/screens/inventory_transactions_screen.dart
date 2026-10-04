@@ -32,9 +32,9 @@ class InventoryTransactionsScreen extends ConsumerWidget {
         children: [
           Text(
             'Inventory Transaction History',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           _FilterBar(
@@ -88,18 +88,29 @@ class _FilterBar extends ConsumerWidget {
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               items: [
-                const DropdownMenuItem(value: null, child: Text('All Products')),
-                ...products.map((p) => DropdownMenuItem(
-                      value: p.id,
-                      child: Text('${p.name} (${p.sku})',
-                          overflow: TextOverflow.ellipsis),
-                    )),
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All Products'),
+                ),
+                ...products.map(
+                  (p) => DropdownMenuItem(
+                    value: p.id,
+                    child: Text(
+                      '${p.name} (${p.sku})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
               ],
               onChanged: (v) =>
-                  ref.read(transactionsProductFilterProvider.notifier).state = v,
+                  ref.read(transactionsProductFilterProvider.notifier).state =
+                      v,
             ),
           ),
           loading: () => const SizedBox(width: 260),
@@ -116,10 +127,9 @@ class _FilterBar extends ConsumerWidget {
             ),
             items: [
               const DropdownMenuItem(value: null, child: Text('All Types')),
-              ...transactionTypes.map((t) => DropdownMenuItem(
-                    value: t,
-                    child: Text(_typeLabel(t)),
-                  )),
+              ...transactionTypes.map(
+                (t) => DropdownMenuItem(value: t, child: Text(_typeLabel(t))),
+              ),
             ],
             onChanged: (v) =>
                 ref.read(transactionsTypeFilterProvider.notifier).state = v,
@@ -138,9 +148,11 @@ class _FilterBar extends ConsumerWidget {
             }
           },
           icon: const Icon(Icons.calendar_today, size: 18),
-          label: Text(from != null
-              ? '${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}'
-              : 'From'),
+          label: Text(
+            from != null
+                ? '${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}'
+                : 'From',
+          ),
         ),
         OutlinedButton.icon(
           onPressed: () async {
@@ -155,9 +167,11 @@ class _FilterBar extends ConsumerWidget {
             }
           },
           icon: const Icon(Icons.calendar_today, size: 18),
-          label: Text(to != null
-              ? '${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}'
-              : 'To'),
+          label: Text(
+            to != null
+                ? '${to.year}-${to.month.toString().padLeft(2, '0')}-${to.day.toString().padLeft(2, '0')}'
+                : 'To',
+          ),
         ),
         if (productId != null || type != null || from != null || to != null)
           TextButton.icon(
@@ -195,10 +209,7 @@ class _FilterBar extends ConsumerWidget {
 }
 
 class _TransactionsTable extends StatelessWidget {
-  const _TransactionsTable({
-    required this.items,
-    required this.onProductTap,
-  });
+  const _TransactionsTable({required this.items, required this.onProductTap});
 
   final List<TransactionWithProduct> items;
   final void Function(TransactionWithProduct) onProductTap;
@@ -250,16 +261,22 @@ class _TransactionsTable extends StatelessWidget {
         DataCell(Text(_formatDate(t.createdAt))),
         DataCell(Text(twp.productName)),
         DataCell(Text(twp.productSku)),
-        DataCell(TransactionTypeBadge(
-          transactionType: t.transactionType,
-          compact: true,
-        )),
+        DataCell(
+          TransactionTypeBadge(
+            transactionType: t.transactionType,
+            compact: true,
+          ),
+        ),
         DataCell(Text(t.referenceId?.toString() ?? '-')),
         DataCell(Text(t.quantity.toStringAsFixed(0))),
-        DataCell(Text(
-          t.unitCost != null ? '\$${t.unitCost!.toStringAsFixed(2)}' : '-',
-        )),
-        DataCell(Text(t.notes ?? '-', maxLines: 2, overflow: TextOverflow.ellipsis)),
+        DataCell(
+          Text(
+            t.unitCost != null ? 'PKR ${t.unitCost!.toStringAsFixed(2)}' : '-',
+          ),
+        ),
+        DataCell(
+          Text(t.notes ?? '-', maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
       ],
     );
   }

@@ -6,10 +6,7 @@ import '../../../products/presentation/widgets/form_dialog.dart';
 import '../../../sales/presentation/providers/sales_providers.dart';
 import '../providers/expenses_providers.dart';
 
-Future<void> showExpenseFormDialog(
-  BuildContext context, {
-  Expense? existing,
-}) {
+Future<void> showExpenseFormDialog(BuildContext context, {Expense? existing}) {
   return showDialog(
     context: context,
     builder: (context) => ExpenseFormDialog(existing: existing),
@@ -38,12 +35,18 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.existing?.title ?? '');
+    _titleController = TextEditingController(
+      text: widget.existing?.title ?? '',
+    );
     _amountController = TextEditingController(
-        text: widget.existing != null ? widget.existing!.amount.toString() : '');
-    _referenceController =
-        TextEditingController(text: widget.existing?.referenceNumber ?? '');
-    _notesController = TextEditingController(text: widget.existing?.notes ?? '');
+      text: widget.existing != null ? widget.existing!.amount.toString() : '',
+    );
+    _referenceController = TextEditingController(
+      text: widget.existing?.referenceNumber ?? '',
+    );
+    _notesController = TextEditingController(
+      text: widget.existing?.notes ?? '',
+    );
     _expenseDate = widget.existing?.expenseDate ?? DateTime.now();
     _categoryId = widget.existing?.expenseCategoryId;
     _paymentMethodId = widget.existing?.paymentMethodId;
@@ -70,15 +73,18 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
       return;
     }
     if (categoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
       return;
     }
     final repo = ref.read(expensesRepositoryProvider);
-    final reference =
-        _referenceController.text.trim().isEmpty ? null : _referenceController.text.trim();
-    final notes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+    final reference = _referenceController.text.trim().isEmpty
+        ? null
+        : _referenceController.text.trim();
+    final notes = _notesController.text.trim().isEmpty
+        ? null
+        : _notesController.text.trim();
 
     try {
       if (widget.existing != null) {
@@ -106,9 +112,9 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -161,12 +167,15 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                       border: OutlineInputBorder(),
                     ),
                     items: categories
-                        .map((c) =>
-                            DropdownMenuItem(value: c.id, child: Text(c.name)))
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _categoryId = v),
-                    validator: (v) =>
-                        v == null ? 'Category is required' : null,
+                    validator: (v) => v == null ? 'Category is required' : null,
                   );
                 },
                 loading: () => const LinearProgressIndicator(),
@@ -178,12 +187,15 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Amount',
                   border: OutlineInputBorder(),
-                  prefixText: '\$ ',
+                  prefixText: 'PKR  ',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 validator: (v) {
                   final n = double.tryParse(v?.trim() ?? '');
-                  if (n == null || n <= 0) return 'Amount must be greater than 0';
+                  if (n == null || n <= 0)
+                    return 'Amount must be greater than 0';
                   return null;
                 },
               ),
@@ -223,10 +235,12 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
                         value: null,
                         child: Text('— None —'),
                       ),
-                      ...methods.map((m) => DropdownMenuItem<int?>(
-                            value: m.id,
-                            child: Text(m.name),
-                          )),
+                      ...methods.map(
+                        (m) => DropdownMenuItem<int?>(
+                          value: m.id,
+                          child: Text(m.name),
+                        ),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _paymentMethodId = v),
                   );
@@ -260,10 +274,7 @@ class _ExpenseFormDialogState extends ConsumerState<ExpenseFormDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Save'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
       ],
     );
   }

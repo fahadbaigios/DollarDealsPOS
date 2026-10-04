@@ -7,15 +7,36 @@ import 'providers/sales_providers.dart';
 
 /// Main sales screen with POS and History tabs.
 class SalesScreen extends ConsumerStatefulWidget {
-  const SalesScreen({super.key});
+  const SalesScreen({super.key, this.showHistoryInitially = false});
+
+  final bool showHistoryInitially;
 
   @override
   ConsumerState<SalesScreen> createState() => _SalesScreenState();
 }
 
 class _SalesScreenState extends ConsumerState<SalesScreen> {
-  int _selectedIndex = 0;
-  bool _historyInitialized = false;
+  late int _selectedIndex;
+  late bool _historyInitialized;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.showHistoryInitially ? 1 : 0;
+    _historyInitialized = widget.showHistoryInitially;
+  }
+
+  @override
+  void didUpdateWidget(covariant SalesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showHistoryInitially == widget.showHistoryInitially) return;
+
+    _selectedIndex = widget.showHistoryInitially ? 1 : 0;
+    _historyInitialized = _historyInitialized || widget.showHistoryInitially;
+    if (widget.showHistoryInitially) {
+      ref.invalidate(salesHistoryPaginatedProvider);
+    }
+  }
 
   void _selectHistory() {
     // Refresh on every visit so a sale completed since the last visit appears
@@ -36,9 +57,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            border: Border(
-              bottom: BorderSide(color: theme.dividerColor),
-            ),
+            border: Border(bottom: BorderSide(color: theme.dividerColor)),
           ),
           child: Row(
             children: [

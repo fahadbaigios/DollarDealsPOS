@@ -95,12 +95,14 @@ class CreatePurchaseForm extends ConsumerWidget {
                 onRemoveItem: (index) {
                   final updated = [...items];
                   updated.removeAt(index);
-                  ref.read(createPurchaseItemsProvider.notifier).state = updated;
+                  ref.read(createPurchaseItemsProvider.notifier).state =
+                      updated;
                 },
                 onItemChanged: (index, item) {
                   final updated = [...items];
                   updated[index] = item;
-                  ref.read(createPurchaseItemsProvider.notifier).state = updated;
+                  ref.read(createPurchaseItemsProvider.notifier).state =
+                      updated;
                 },
               ),
             ],
@@ -159,7 +161,10 @@ class _MetadataSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Purchase Info', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Purchase Info',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 16),
             suppliersAsync.when(
               data: (suppliers) => DropdownButtonFormField<Supplier>(
@@ -186,7 +191,8 @@ class _MetadataSection extends StatelessWidget {
                       labelText: 'Invoice (auto if empty)',
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) => onInvoiceNumberChanged(v.isEmpty ? null : v),
+                    onChanged: (v) =>
+                        onInvoiceNumberChanged(v.isEmpty ? null : v),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -265,7 +271,7 @@ class _ItemsSection extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text('\$${item.lineTotal.toStringAsFixed(2)}'),
+          child: Text('PKR ${item.lineTotal.toStringAsFixed(2)}'),
         ),
         IconButton(
           icon: const Icon(Icons.delete_outline, size: 20),
@@ -298,9 +304,7 @@ class _ItemsSection extends StatelessWidget {
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(24),
-                child: Center(
-                  child: Text('Add items to this purchase'),
-                ),
+                child: Center(child: Text('Add items to this purchase')),
               )
             else
               Table(
@@ -325,12 +329,14 @@ class _ItemsSection extends StatelessWidget {
                       _TableHeader(''),
                     ],
                   ),
-                  ...items.asMap().entries.map((e) => _buildItemRow(
-                        item: e.value,
-                        products: productsAsync.valueOrNull ?? [],
-                        onChanged: (item) => onItemChanged(e.key, item),
-                        onRemove: () => onRemoveItem(e.key),
-                      )),
+                  ...items.asMap().entries.map(
+                    (e) => _buildItemRow(
+                      item: e.value,
+                      products: productsAsync.valueOrNull ?? [],
+                      onChanged: (item) => onItemChanged(e.key, item),
+                      onRemove: () => onRemoveItem(e.key),
+                    ),
+                  ),
                 ],
               ),
           ],
@@ -434,9 +440,12 @@ class _SummaryRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            label,
+            style: TextStyle(fontWeight: bold ? FontWeight.bold : null),
+          ),
+          Text(
+            'PKR ${amount.toStringAsFixed(2)}',
             style: TextStyle(fontWeight: bold ? FontWeight.bold : null),
           ),
         ],
@@ -465,7 +474,7 @@ class _MoneyField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
-          prefixText: '\$ ',
+          prefixText: 'PKR  ',
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         onChanged: (v) {
@@ -480,10 +489,7 @@ class _MoneyField extends StatelessWidget {
 typedef ValueChanged2<A, B> = void Function(A a, B b);
 
 class _DatePickerField extends StatelessWidget {
-  const _DatePickerField({
-    required this.date,
-    required this.onDateChanged,
-  });
+  const _DatePickerField({required this.date, required this.onDateChanged});
 
   final DateTime date;
   final ValueChanged<DateTime> onDateChanged;

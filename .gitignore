@@ -25,7 +25,6 @@ build_runner/
 # IDE files
 
 ## VS Code
-.vscode/
 
 ## IntelliJ / Android Studio
 .idea/
@@ -43,6 +42,7 @@ desktop.ini
 
 # Database files (important for POS)
 
+temp_auto_push.bat
 # SQLite database
 *.sqlite
 *.sqlite3
@@ -87,3 +87,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+.gitignore
+branch_structure.json

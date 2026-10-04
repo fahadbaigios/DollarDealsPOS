@@ -49,6 +49,7 @@ class SeedService {
           PaymentMethodsCompanion.insert(name: 'Cash'),
           PaymentMethodsCompanion.insert(name: 'Card'),
           PaymentMethodsCompanion.insert(name: 'Bank Transfer'),
+          PaymentMethodsCompanion.insert(name: 'JazzCash/Easypaisa'),
         ]);
         batch.insertAll(_db.expenseCategories, [
           ExpenseCategoriesCompanion.insert(name: 'Rent'),

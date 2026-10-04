@@ -20,7 +20,8 @@ class InventoryReportScreen extends ConsumerWidget {
     final reportAsync = ref.watch(inventoryReportProvider);
     final categoriesAsync = ref.watch(reportCategoriesProvider);
 
-    final categoryOptions = categoriesAsync.valueOrNull
+    final categoryOptions =
+        categoriesAsync.valueOrNull
             ?.map((c) => (id: (c as Category).id, name: c.name))
             .toList() ??
         [];
@@ -54,12 +55,16 @@ class InventoryReportScreen extends ConsumerWidget {
             ),
             ReportSummaryCard(
               title: 'Stock Value (Cost)',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalStockValueAtCost),
+              value: NumberFormat.currency(
+                symbol: 'PKR ',
+              ).format(r.totalStockValueAtCost),
               icon: Icons.account_balance_wallet,
             ),
             ReportSummaryCard(
               title: 'Stock Value (Selling)',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalStockValueAtSelling),
+              value: NumberFormat.currency(
+                symbol: 'PKR ',
+              ).format(r.totalStockValueAtSelling),
               icon: Icons.trending_up,
             ),
             ReportSummaryCard(
@@ -93,7 +98,7 @@ class InventoryReportScreen extends ConsumerWidget {
               icon: Icons.inventory_2,
             );
           }
-          final currencyFormat = NumberFormat.currency(symbol: '\$');
+          final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
           return DataTableCard(
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
@@ -115,23 +120,33 @@ class InventoryReportScreen extends ConsumerWidget {
                     DataColumn(label: Text('Value (Selling)')),
                     DataColumn(label: Text('Status')),
                   ],
-                  rows: result.rows.map((r) => DataRow(
-                        cells: [
-                          DataCell(Text(r.name)),
-                          DataCell(Text(r.sku)),
-                          DataCell(Text(r.barcode ?? '—')),
-                          DataCell(Text(r.categoryName)),
-                          DataCell(Text(r.supplierName ?? '—')),
-                          DataCell(Text(r.unitName)),
-                          DataCell(Text(r.stockQuantity.toStringAsFixed(1))),
-                          DataCell(Text(r.reorderLevel.toStringAsFixed(1))),
-                          DataCell(Text(currencyFormat.format(r.costPrice))),
-                          DataCell(Text(currencyFormat.format(r.salePrice))),
-                          DataCell(Text(currencyFormat.format(r.stockValueAtCost))),
-                          DataCell(Text(currencyFormat.format(r.stockValueAtSelling))),
-                          DataCell(Text(r.stockStatus)),
-                        ],
-                      )).toList(),
+                  rows: result.rows
+                      .map(
+                        (r) => DataRow(
+                          cells: [
+                            DataCell(Text(r.name)),
+                            DataCell(Text(r.sku)),
+                            DataCell(Text(r.barcode ?? '—')),
+                            DataCell(Text(r.categoryName)),
+                            DataCell(Text(r.supplierName ?? '—')),
+                            DataCell(Text(r.unitName)),
+                            DataCell(Text(r.stockQuantity.toStringAsFixed(1))),
+                            DataCell(Text(r.reorderLevel.toStringAsFixed(1))),
+                            DataCell(Text(currencyFormat.format(r.costPrice))),
+                            DataCell(Text(currencyFormat.format(r.salePrice))),
+                            DataCell(
+                              Text(currencyFormat.format(r.stockValueAtCost)),
+                            ),
+                            DataCell(
+                              Text(
+                                currencyFormat.format(r.stockValueAtSelling),
+                              ),
+                            ),
+                            DataCell(Text(r.stockStatus)),
+                          ],
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

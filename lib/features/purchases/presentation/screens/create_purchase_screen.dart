@@ -12,7 +12,8 @@ class CreatePurchaseScreen extends ConsumerStatefulWidget {
   const CreatePurchaseScreen({super.key});
 
   @override
-  ConsumerState<CreatePurchaseScreen> createState() => _CreatePurchaseScreenState();
+  ConsumerState<CreatePurchaseScreen> createState() =>
+      _CreatePurchaseScreenState();
 }
 
 class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
@@ -32,11 +33,12 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
 
     final subtotal = items.fold<double>(0, (s, i) => s + i.lineTotal);
     final totalTax = items.fold<double>(0, (s, i) => s + i.itemTax);
-    final totalAmount =
-        subtotal - _discountAmount + totalTax + _otherCharges;
+    final totalAmount = subtotal - _discountAmount + totalTax + _otherCharges;
     final dueAmount = (totalAmount - _paidAmount).clamp(0.0, double.infinity);
-    final paymentStatus =
-        service.computePaymentStatus(totalAmount, _paidAmount);
+    final paymentStatus = service.computePaymentStatus(
+      totalAmount,
+      _paidAmount,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,7 +79,8 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
               invoiceNumber: _invoiceNumber,
               onInvoiceNumberChanged: (v) => setState(() => _invoiceNumber = v),
               discountAmount: _discountAmount,
-              onDiscountAmountChanged: (v) => setState(() => _discountAmount = v),
+              onDiscountAmountChanged: (v) =>
+                  setState(() => _discountAmount = v),
               otherCharges: _otherCharges,
               onOtherChargesChanged: (v) => setState(() => _otherCharges = v),
               paidAmount: _paidAmount,
@@ -101,15 +104,15 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
     double totalAmount,
   ) async {
     if (_supplier == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a supplier')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a supplier')));
       return;
     }
     if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one item')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Add at least one item')));
       return;
     }
     if (_paidAmount < 0) {
@@ -136,7 +139,7 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm Purchase'),
         content: Text(
-          'Save this purchase for \$${totalAmount.toStringAsFixed(2)}?',
+          'Save this purchase for PKR ${totalAmount.toStringAsFixed(2)}?',
         ),
         actions: [
           TextButton(
@@ -179,15 +182,15 @@ class _CreatePurchaseScreenState extends ConsumerState<CreatePurchaseScreen> {
       }
     } on ArgumentError catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (context.mounted) {

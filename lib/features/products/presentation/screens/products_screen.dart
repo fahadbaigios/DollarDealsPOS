@@ -20,7 +20,8 @@ class ProductsScreen extends ConsumerStatefulWidget {
   ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends ConsumerState<ProductsScreen> with SingleTickerProviderStateMixin {
+class _ProductsScreenState extends ConsumerState<ProductsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
 
@@ -90,7 +91,8 @@ class _ProductsTab extends ConsumerWidget {
             SearchField(
               controller: searchController,
               hintText: 'Search by name, SKU, barcode...',
-              onChanged: (v) => ref.read(productsSearchQueryProvider.notifier).state = v,
+              onChanged: (v) =>
+                  ref.read(productsSearchQueryProvider.notifier).state = v,
             ),
             const SizedBox(width: 12),
             categoriesAsync.when(
@@ -98,24 +100,32 @@ class _ProductsTab extends ConsumerWidget {
                 value: ref.watch(productsCategoryFilterProvider),
                 hint: const Text('All categories'),
                 items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('All categories')),
-                  ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  ...categories.map(
+                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  ),
                 ],
-                onChanged: (v) => ref.read(productsCategoryFilterProvider.notifier).state = v,
+                onChanged: (v) =>
+                    ref.read(productsCategoryFilterProvider.notifier).state = v,
               ),
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(width: 12),
-              SegmentedButton<bool?>(
-                segments: const [
-                  ButtonSegment(value: null, label: Text('All')),
-                  ButtonSegment(value: true, label: Text('Active')),
-                  ButtonSegment(value: false, label: Text('Inactive')),
-                ],
-                selected: {ref.watch(productsActiveFilterProvider)},
-                onSelectionChanged: (s) => ref.read(productsActiveFilterProvider.notifier).state = s.first,
-              ),
+            SegmentedButton<bool?>(
+              segments: const [
+                ButtonSegment(value: null, label: Text('All')),
+                ButtonSegment(value: true, label: Text('Active')),
+                ButtonSegment(value: false, label: Text('Inactive')),
+              ],
+              selected: {ref.watch(productsActiveFilterProvider)},
+              onSelectionChanged: (s) =>
+                  ref.read(productsActiveFilterProvider.notifier).state =
+                      s.first,
+            ),
             const SizedBox(width: 12),
             FilledButton.icon(
               onPressed: () async {
@@ -137,10 +147,15 @@ class _ProductsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildTable(BuildContext context, WidgetRef ref, List<Product> products) {
+  Widget _buildTable(
+    BuildContext context,
+    WidgetRef ref,
+    List<Product> products,
+  ) {
     if (products.isEmpty) {
       return const EmptyState(
-        message: 'No products yet. Add categories and units first, then add products.',
+        message:
+            'No products yet. Add categories and units first, then add products.',
         icon: Icons.inventory_2_outlined,
       );
     }
@@ -176,7 +191,11 @@ class _ProductsTab extends ConsumerWidget {
               Text(product.name),
               if (isLowStock) ...[
                 const SizedBox(width: 6),
-                Icon(Icons.warning_amber_rounded, size: 18, color: Theme.of(context).colorScheme.error),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ],
             ],
           ),
@@ -184,13 +203,15 @@ class _ProductsTab extends ConsumerWidget {
         DataCell(Text(product.sku)),
         DataCell(
           FutureBuilder(
-            future: ref.read(categoriesRepositoryProvider).getById(product.categoryId),
+            future: ref
+                .read(categoriesRepositoryProvider)
+                .getById(product.categoryId),
             builder: (context, snap) => Text(snap.data?.name ?? '—'),
           ),
         ),
         DataCell(Text(product.stockQuantity.toStringAsFixed(0))),
-        DataCell(Text('\$${product.costPrice.toStringAsFixed(2)}')),
-        DataCell(Text('\$${product.salePrice.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${product.costPrice.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${product.salePrice.toStringAsFixed(2)}')),
         DataCell(
           GestureDetector(
             onTap: () async {

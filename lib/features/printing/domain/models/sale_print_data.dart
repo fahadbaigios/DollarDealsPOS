@@ -31,8 +31,8 @@ class BusinessSettingsMap {
     this.phone = '',
     this.email = '',
     this.ntmOrTaxNumber = '',
-    this.currencyCode = 'USD',
-    this.currencySymbol = '\$',
+    this.currencyCode = 'PKR',
+    this.currencySymbol = 'PKR ',
     this.receiptFooter = 'Thank you for your business!',
     this.logoPath,
   });
@@ -54,8 +54,8 @@ class BusinessSettingsMap {
       phone: map['phone'] ?? '',
       email: map['email'] ?? '',
       ntmOrTaxNumber: map['ntm_or_tax_number'] ?? '',
-      currencyCode: map['currency_code'] ?? 'USD',
-      currencySymbol: map['currency_symbol'] ?? '\$',
+      currencyCode: map['currency_code'] ?? 'PKR',
+      currencySymbol: map['currency_symbol'] ?? 'PKR ',
       receiptFooter: map['receipt_footer'] ?? 'Thank you for your business!',
       logoPath: map['logo_path'],
     );

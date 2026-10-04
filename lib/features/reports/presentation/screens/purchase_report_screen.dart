@@ -22,7 +22,8 @@ class PurchaseReportScreen extends ConsumerWidget {
     final reportAsync = ref.watch(purchaseReportProvider);
     final suppliersAsync = ref.watch(reportSuppliersProvider);
 
-    final supplierOptions = suppliersAsync.valueOrNull
+    final supplierOptions =
+        suppliersAsync.valueOrNull
             ?.map((s) => (id: (s as Supplier).id, name: s.name))
             .toList() ??
         [];
@@ -51,18 +52,18 @@ class PurchaseReportScreen extends ConsumerWidget {
             ),
             ReportSummaryCard(
               title: 'Total Value',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalValue),
+              value: NumberFormat.currency(symbol: 'PKR ').format(r.totalValue),
               icon: Icons.attach_money,
               iconColor: Colors.blue,
             ),
             ReportSummaryCard(
               title: 'Total Paid',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalPaid),
+              value: NumberFormat.currency(symbol: 'PKR ').format(r.totalPaid),
               icon: Icons.check_circle,
             ),
             ReportSummaryCard(
               title: 'Total Due',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalDue),
+              value: NumberFormat.currency(symbol: 'PKR ').format(r.totalDue),
               icon: Icons.pending,
               iconColor: Colors.orange,
             ),
@@ -85,7 +86,7 @@ class PurchaseReportScreen extends ConsumerWidget {
               icon: Icons.shopping_cart,
             );
           }
-          final currencyFormat = NumberFormat.currency(symbol: '\$');
+          final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
           final dateFormat = DateFormat('yyyy-MM-dd');
           return DataTableCard(
             child: SingleChildScrollView(
@@ -107,30 +108,42 @@ class PurchaseReportScreen extends ConsumerWidget {
                     DataColumn(label: Text('Created By')),
                     DataColumn(label: Text('')),
                   ],
-                  rows: result.rows.map((r) => DataRow(
-                        cells: [
-                          DataCell(Text(r.invoiceNumber ?? '—')),
-                          DataCell(Text(dateFormat.format(r.date))),
-                          DataCell(Text(r.supplierName ?? '—')),
-                          DataCell(Text(currencyFormat.format(r.subtotal))),
-                          DataCell(Text(currencyFormat.format(r.discount))),
-                          DataCell(Text(currencyFormat.format(r.tax))),
-                          DataCell(Text(currencyFormat.format(r.total))),
-                          DataCell(Text(currencyFormat.format(r.paid))),
-                          DataCell(Text(currencyFormat.format(r.due))),
-                          DataCell(PaymentStatusBadge(status: r.paymentStatus, compact: true)),
-                          DataCell(Text(r.createdByName ?? '—')),
-                          DataCell(IconButton(
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    PurchaseDetailsScreen(purchaseId: r.purchase.id),
+                  rows: result.rows
+                      .map(
+                        (r) => DataRow(
+                          cells: [
+                            DataCell(Text(r.invoiceNumber ?? '—')),
+                            DataCell(Text(dateFormat.format(r.date))),
+                            DataCell(Text(r.supplierName ?? '—')),
+                            DataCell(Text(currencyFormat.format(r.subtotal))),
+                            DataCell(Text(currencyFormat.format(r.discount))),
+                            DataCell(Text(currencyFormat.format(r.tax))),
+                            DataCell(Text(currencyFormat.format(r.total))),
+                            DataCell(Text(currencyFormat.format(r.paid))),
+                            DataCell(Text(currencyFormat.format(r.due))),
+                            DataCell(
+                              PaymentStatusBadge(
+                                status: r.paymentStatus,
+                                compact: true,
                               ),
                             ),
-                          )),
-                        ],
-                      )).toList(),
+                            DataCell(Text(r.createdByName ?? '—')),
+                            DataCell(
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => PurchaseDetailsScreen(
+                                      purchaseId: r.purchase.id,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

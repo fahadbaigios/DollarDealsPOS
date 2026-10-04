@@ -8,6 +8,7 @@ import '../../products/presentation/widgets/data_table_card.dart';
 import '../../products/presentation/widgets/empty_state.dart';
 import '../../expenses/presentation/providers/expenses_providers.dart';
 import '../../sales/presentation/screens/sale_details_screen.dart';
+import '../../settings/presentation/providers/settings_providers.dart';
 import '../../expenses/presentation/dialogs/expense_form_dialog.dart';
 import 'providers/dashboard_providers.dart';
 import 'widgets/summary_card.dart';
@@ -28,8 +29,8 @@ class DashboardScreen extends ConsumerWidget {
                 child: Text(
                   'Dashboard',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               FilledButton.icon(
@@ -42,38 +43,128 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           _SummaryCardsGrid(),
           const SizedBox(height: 24),
+          const _TodaySalesByPaymentMethodSection(),
+          const SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: _RecentSalesSection(),
-              ),
+              Expanded(flex: 2, child: _RecentSalesSection()),
               const SizedBox(width: 24),
-              Expanded(
-                flex: 2,
-                child: _LowStockSection(),
-              ),
+              Expanded(flex: 2, child: _LowStockSection()),
             ],
           ),
           const SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 2,
-                child: _RecentExpensesSection(),
-              ),
+              Expanded(flex: 2, child: _RecentExpensesSection()),
               const SizedBox(width: 24),
-              Expanded(
-                flex: 2,
-                child: _TopSellingSection(),
-              ),
+              Expanded(flex: 2, child: _TopSellingSection()),
             ],
           ),
         ],
       ),
     );
+  }
+}
+
+class _TodaySalesByPaymentMethodSection extends ConsumerWidget {
+  const _TodaySalesByPaymentMethodSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final salesAsync = ref.watch(todaySalesByPaymentMethodProvider);
+    final currencySymbol =
+        ref
+            .watch(businessProfileSettingsProvider)
+            .valueOrNull
+            ?.currencySymbol ??
+        'PKR ';
+    final currencyFormat = NumberFormat.currency(symbol: currencySymbol);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          "Today's Sales by Payment Method",
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        salesAsync.when(
+          data: (summaries) {
+            if (summaries.isEmpty) {
+              return const Text('No payment methods configured.');
+            }
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth >= 1100
+                    ? (constraints.maxWidth - 48) / 4
+                    : constraints.maxWidth >= 700
+                    ? (constraints.maxWidth - 16) / 2
+                    : constraints.maxWidth;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: summaries
+                      .map(
+                        (summary) => SizedBox(
+                          width: width,
+                          height: 118,
+                          child: SummaryCard(
+                            title: '${summary.paymentMethodName} Sales',
+                            value: currencyFormat.format(summary.total),
+                            subtitle:
+                                '${summary.saleCount} ${summary.saleCount == 1 ? 'order' : 'orders'} today',
+                            icon: _paymentMethodIcon(summary.paymentMethodName),
+                            iconColor: _paymentMethodColor(
+                              context,
+                              summary.paymentMethodName,
+                            ),
+                            routePath: RouteNames.salesHistoryPath,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            );
+          },
+          loading: () => const SizedBox(
+            height: 118,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Text('Unable to load payment totals: $error'),
+        ),
+      ],
+    );
+  }
+
+  IconData _paymentMethodIcon(String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains('cash') && !normalized.contains('jazz')) {
+      return Icons.payments_outlined;
+    }
+    if (normalized.contains('card')) return Icons.credit_card;
+    if (normalized.contains('bank')) return Icons.account_balance_outlined;
+    if (normalized.contains('jazz') ||
+        normalized.contains('easypaisa') ||
+        normalized.contains('wallet')) {
+      return Icons.phone_android;
+    }
+    return Icons.payment;
+  }
+
+  Color _paymentMethodColor(BuildContext context, String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains('cash') && !normalized.contains('jazz')) {
+      return Colors.green;
+    }
+    if (normalized.contains('card')) return Colors.blue;
+    if (normalized.contains('bank')) return Colors.indigo;
+    if (normalized.contains('jazz')) return Colors.red;
+    return Theme.of(context).colorScheme.primary;
   }
 }
 
@@ -87,7 +178,7 @@ class _SummaryCardsGrid extends ConsumerWidget {
     final totalProductsAsync = ref.watch(totalProductsCountProvider);
     final todayExpensesAsync = ref.watch(todayExpensesTotalProvider);
 
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
 
     return todayPlAsync.when(
       data: (todayPl) {
@@ -115,15 +206,20 @@ class _SummaryCardsGrid extends ConsumerWidget {
                                   children: [
                                     SummaryCard(
                                       title: 'Today Sales',
-                                      value: currencyFormat.format(todayPl.revenue),
+                                      value: currencyFormat.format(
+                                        todayPl.revenue,
+                                      ),
                                       icon: Icons.point_of_sale,
                                       iconColor: Colors.green,
-                                      routePath: RouteNames.salesPath,
+                                      routePath: RouteNames.salesHistoryPath,
                                     ),
                                     SummaryCard(
                                       title: 'Today Profit',
-                                      value: currencyFormat.format(todayPl.netProfit),
-                                      subtitle: 'Gross: ${currencyFormat.format(todayPl.grossProfit)}',
+                                      value: currencyFormat.format(
+                                        todayPl.netProfit,
+                                      ),
+                                      subtitle:
+                                          'Gross: ${currencyFormat.format(todayPl.grossProfit)}',
                                       icon: Icons.trending_up,
                                       iconColor: todayPl.netProfit >= 0
                                           ? Colors.green
@@ -131,15 +227,20 @@ class _SummaryCardsGrid extends ConsumerWidget {
                                     ),
                                     SummaryCard(
                                       title: 'Monthly Sales',
-                                      value: currencyFormat.format(monthlyPl.revenue),
+                                      value: currencyFormat.format(
+                                        monthlyPl.revenue,
+                                      ),
                                       icon: Icons.calendar_month,
                                       iconColor: Colors.blue,
-                                      routePath: RouteNames.salesPath,
+                                      routePath: RouteNames.salesHistoryPath,
                                     ),
                                     SummaryCard(
                                       title: 'Monthly Profit',
-                                      value: currencyFormat.format(monthlyPl.netProfit),
-                                      subtitle: 'Gross: ${currencyFormat.format(monthlyPl.grossProfit)}',
+                                      value: currencyFormat.format(
+                                        monthlyPl.netProfit,
+                                      ),
+                                      subtitle:
+                                          'Gross: ${currencyFormat.format(monthlyPl.grossProfit)}',
                                       icon: Icons.account_balance_wallet,
                                       iconColor: monthlyPl.netProfit >= 0
                                           ? Colors.green
@@ -147,7 +248,9 @@ class _SummaryCardsGrid extends ConsumerWidget {
                                     ),
                                     SummaryCard(
                                       title: 'Today Expenses',
-                                      value: currencyFormat.format(todayExpenses),
+                                      value: currencyFormat.format(
+                                        todayExpenses,
+                                      ),
                                       icon: Icons.receipt_long,
                                       iconColor: Colors.orange,
                                       routePath: RouteNames.expensesPath,
@@ -219,7 +322,7 @@ class _RecentSalesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(recentSalesProvider);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
     final dateFormat = DateFormat('MMM d, HH:mm');
 
     return DataTableCard(
@@ -244,12 +347,12 @@ class _RecentSalesSection extends ConsumerWidget {
                     Text(
                       'Recent Sales',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     TextButton(
-                      onPressed: () => context.go(RouteNames.salesPath),
+                      onPressed: () => context.go(RouteNames.salesHistoryPath),
                       child: const Text('View all'),
                     ),
                   ],
@@ -289,9 +392,11 @@ class _RecentSalesSection extends ConsumerWidget {
           );
         },
         loading: () => const Center(
-            child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator())),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
           child: Text('Error: $e'),
@@ -328,8 +433,8 @@ class _LowStockSection extends ConsumerWidget {
                     Text(
                       'Low Stock Products',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     TextButton(
@@ -364,9 +469,11 @@ class _LowStockSection extends ConsumerWidget {
           );
         },
         loading: () => const Center(
-            child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator())),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
           child: Text('Error: $e'),
@@ -381,7 +488,7 @@ class _RecentExpensesSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(recentExpensesProvider);
     final categoriesAsync = ref.watch(expenseCategoriesStreamProvider);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
     final dateFormat = DateFormat('MMM d');
 
     return DataTableCard(
@@ -408,8 +515,8 @@ class _RecentExpensesSection extends ConsumerWidget {
                     Text(
                       'Recent Expenses',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     TextButton(
@@ -444,9 +551,11 @@ class _RecentExpensesSection extends ConsumerWidget {
           );
         },
         loading: () => const Center(
-            child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator())),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
           child: Text('Error: $e'),
@@ -460,7 +569,7 @@ class _TopSellingSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(topSellingProductsProvider);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
 
     return DataTableCard(
       child: async.when(
@@ -482,8 +591,8 @@ class _TopSellingSection extends ConsumerWidget {
                 child: Text(
                   'Top Selling (This Month)',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               SingleChildScrollView(
@@ -509,9 +618,11 @@ class _TopSellingSection extends ConsumerWidget {
           );
         },
         loading: () => const Center(
-            child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator())),
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          ),
+        ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(24),
           child: Text('Error: $e'),

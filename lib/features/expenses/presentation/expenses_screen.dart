@@ -82,9 +82,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _ExpensesTab(
-                onAddExpense: () => showExpenseFormDialog(context),
-              ),
+              _ExpensesTab(onAddExpense: () => showExpenseFormDialog(context)),
               const _ExpenseCategoriesTab(),
             ],
           ),
@@ -120,12 +118,15 @@ class _ExpensesTab extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, Expense expense) async {
+    BuildContext context,
+    WidgetRef ref,
+    Expense expense,
+  ) async {
     final ok = await showConfirmDialog(
       context,
       title: 'Delete Expense',
       message:
-          'Delete "${expense.title}" (${NumberFormat.currency(symbol: '\$').format(expense.amount)})?',
+          'Delete "${expense.title}" (${NumberFormat.currency(symbol: 'PKR ').format(expense.amount)})?',
       confirmText: 'Delete',
       isDanger: true,
     );
@@ -133,9 +134,9 @@ class _ExpensesTab extends ConsumerWidget {
     final repo = ref.read(expensesRepositoryProvider);
     await repo.delete(expense.id);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Expense deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Expense deleted')));
     }
   }
 }
@@ -169,7 +170,7 @@ class _ExpensesList extends StatelessWidget {
     final catMap = {for (final c in categories) c.id: c.name};
     final pmMap = {for (final p in paymentMethods) p.id: p.name};
     final dateFormat = DateFormat('yyyy-MM-dd');
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -201,21 +202,30 @@ class _ExpensesList extends StatelessWidget {
                           DataCell(Text(e.title)),
                           DataCell(Text(catMap[e.expenseCategoryId] ?? '—')),
                           DataCell(Text(currencyFormat.format(e.amount))),
-                          DataCell(Text(
+                          DataCell(
+                            Text(
                               e.paymentMethodId != null
                                   ? (pmMap[e.paymentMethodId] ?? '—')
-                                  : '—')),
+                                  : '—',
+                            ),
+                          ),
                           DataCell(Text(e.referenceNumber ?? '—')),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 20,
+                                  ),
                                   onPressed: () => onEdit(e),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                  ),
                                   onPressed: () => onDelete(e),
                                 ),
                               ],
@@ -255,11 +265,13 @@ class _ExpensesFilters extends ConsumerWidget {
                 value: categoryFilter,
                 hint: const Text('All Categories'),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('All Categories')),
-                  ...categories.map((c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(c.name),
-                      )),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('All Categories'),
+                  ),
+                  ...categories.map(
+                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  ),
                 ],
                 onChanged: (v) =>
                     ref.read(expensesCategoryFilterProvider.notifier).state = v,
@@ -381,21 +393,27 @@ class _CategoriesList extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20),
                     onPressed: () async {
-                      await showExpenseCategoryFormDialog(context,
-                          existing: category);
+                      await showExpenseCategoryFormDialog(
+                        context,
+                        existing: category,
+                      );
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
                     onPressed: () async {
-                      final repo = ref.read(expenseCategoriesRepositoryProvider);
+                      final repo = ref.read(
+                        expenseCategoriesRepositoryProvider,
+                      );
                       final deleted = await repo.delete(category.id);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(deleted
-                                ? 'Category deleted'
-                                : 'Cannot delete: category has expenses'),
+                            content: Text(
+                              deleted
+                                  ? 'Category deleted'
+                                  : 'Cannot delete: category has expenses',
+                            ),
                           ),
                         );
                       }

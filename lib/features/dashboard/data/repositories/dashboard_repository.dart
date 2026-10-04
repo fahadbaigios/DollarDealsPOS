@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../database/app_database.dart';
+import '../../domain/models/payment_method_sales_summary.dart';
 import '../../domain/models/profit_loss_summary.dart';
 
 /// Repository for dashboard and business insights.
@@ -39,10 +40,11 @@ class DashboardRepository {
   /// Revenue = sum of sales.total_amount in date range.
   Future<double> getSalesTotal(DateTime from, DateTime to) async {
     final sumExpr = _db.sales.totalAmount.sum();
-    final row = await (_db.selectOnly(_db.sales)
-          ..addColumns([sumExpr])
-          ..where(_salesInRange(from, to)))
-        .getSingleOrNull();
+    final row =
+        await (_db.selectOnly(_db.sales)
+              ..addColumns([sumExpr])
+              ..where(_salesInRange(from, to)))
+            .getSingleOrNull();
     return row?.read(sumExpr) ?? 0.0;
   }
 
@@ -50,32 +52,86 @@ class DashboardRepository {
   Future<double> getCogs(DateTime from, DateTime to) async {
     final lineCost = _db.saleItems.unitCost * _db.saleItems.quantity;
     final sumExpr = lineCost.sum();
-    final row = await (_db.selectOnly(_db.saleItems)
-          ..addColumns([sumExpr])
-          ..join([
-            innerJoin(
-              _db.sales,
-              _db.sales.id.equalsExp(_db.saleItems.saleId),
-            ),
-          ])
-          ..where(_salesInRange(from, to)))
-        .getSingleOrNull();
+    final row =
+        await (_db.selectOnly(_db.saleItems)
+              ..addColumns([sumExpr])
+              ..join([
+                innerJoin(
+                  _db.sales,
+                  _db.sales.id.equalsExp(_db.saleItems.saleId),
+                ),
+              ])
+              ..where(_salesInRange(from, to)))
+            .getSingleOrNull();
     return row?.read(sumExpr) ?? 0.0;
   }
 
   /// Expenses = sum of expenses.amount in date range.
   Future<double> getExpensesTotal(DateTime from, DateTime to) async {
     final sumExpr = _db.expenses.amount.sum();
-    final row = await (_db.selectOnly(_db.expenses)
-          ..addColumns([sumExpr])
-          ..where(_expensesInRange(from, to)))
-        .getSingleOrNull();
+    final row =
+        await (_db.selectOnly(_db.expenses)
+              ..addColumns([sumExpr])
+              ..where(_expensesInRange(from, to)))
+            .getSingleOrNull();
     return row?.read(sumExpr) ?? 0.0;
   }
 
   Future<double> getTodaySalesTotal() async {
     final (from, to) = _todayRange;
     return getSalesTotal(from, to);
+  }
+
+  /// Today's sales split across every configured payment method.
+  /// Methods with no sales are included with a zero total so the dashboard
+  /// always shows the complete set of ways the shop accepts payment.
+  Future<List<PaymentMethodSalesSummary>> getTodaySalesByPaymentMethod() async {
+    final (from, to) = _todayRange;
+    final methods = await (_db.select(
+      _db.paymentMethods,
+    )..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
+    final sales = await (_db.select(
+      _db.sales,
+    )..where((t) => _salesInRange(from, to))).get();
+
+    final totals = <int, double>{};
+    final counts = <int, int>{};
+    var unassignedTotal = 0.0;
+    var unassignedCount = 0;
+
+    for (final sale in sales) {
+      final methodId = sale.paymentMethodId;
+      if (methodId == null) {
+        unassignedTotal += sale.totalAmount;
+        unassignedCount++;
+      } else {
+        totals[methodId] = (totals[methodId] ?? 0) + sale.totalAmount;
+        counts[methodId] = (counts[methodId] ?? 0) + 1;
+      }
+    }
+
+    final summaries = methods
+        .map(
+          (method) => PaymentMethodSalesSummary(
+            paymentMethodId: method.id,
+            paymentMethodName: method.name,
+            total: totals[method.id] ?? 0,
+            saleCount: counts[method.id] ?? 0,
+          ),
+        )
+        .toList();
+
+    if (unassignedCount > 0) {
+      summaries.add(
+        PaymentMethodSalesSummary(
+          paymentMethodId: null,
+          paymentMethodName: 'Unassigned',
+          total: unassignedTotal,
+          saleCount: unassignedCount,
+        ),
+      );
+    }
+    return summaries;
   }
 
   Future<double> getTodayExpensesTotal() async {
@@ -93,7 +149,10 @@ class DashboardRepository {
     return getExpensesTotal(from, to);
   }
 
-  Future<ProfitLossSummary> getProfitLossSummary(DateTime from, DateTime to) async {
+  Future<ProfitLossSummary> getProfitLossSummary(
+    DateTime from,
+    DateTime to,
+  ) async {
     final revenue = await getSalesTotal(from, to);
     final cogs = await getCogs(from, to);
     final expenses = await getExpensesTotal(from, to);
@@ -136,25 +195,20 @@ class DashboardRepository {
 
   /// Top selling products by quantity sold in current month.
   Future<List<({int productId, String name, double quantity, double revenue})>>
-      getTopSellingProducts({int limit = 10}) async {
+  getTopSellingProducts({int limit = 10}) async {
     final (from, to) = _monthRange;
 
     final rows = await (_db.select(_db.saleItems).join([
-      innerJoin(
-        _db.sales,
-        _db.sales.id.equalsExp(_db.saleItems.saleId),
-      ),
-    ])
-          ..where(_salesInRange(from, to)))
-        .get();
+      innerJoin(_db.sales, _db.sales.id.equalsExp(_db.saleItems.saleId)),
+    ])..where(_salesInRange(from, to))).get();
 
     if (rows.isEmpty) return [];
 
     final items = rows.map((r) => r.readTable(_db.saleItems)).toList();
     final productIds = items.map((i) => i.productId).toSet().toList();
-    final products = await (_db.select(_db.products)
-          ..where((t) => t.id.isIn(productIds)))
-        .get();
+    final products = await (_db.select(
+      _db.products,
+    )..where((t) => t.id.isIn(productIds))).get();
     final productMap = {for (final p in products) p.id: p};
 
     final totals = <int, ({double quantity, double revenue})>{};
@@ -190,38 +244,45 @@ class DashboardRepository {
   /// Count active products where stock <= reorder_level and stock > 0.
   Future<int> getLowStockCount() async {
     final countExpr = _db.products.id.count();
-    final row = await (_db.selectOnly(_db.products)
-          ..addColumns([countExpr])
-          ..where(_lowStockCondition))
-        .getSingle();
+    final row =
+        await (_db.selectOnly(_db.products)
+              ..addColumns([countExpr])
+              ..where(_lowStockCondition))
+            .getSingle();
     return row.read(countExpr) ?? 0;
   }
 
   Future<int> getOutOfStockCount() async {
     final countExpr = _db.products.id.count();
-    final row = await (_db.selectOnly(_db.products)
-          ..addColumns([countExpr])
-          ..where(_db.products.isActive.equals(true) &
-              _db.products.stockQuantity.isSmallerOrEqualValue(0)))
-        .getSingle();
+    final row =
+        await (_db.selectOnly(_db.products)
+              ..addColumns([countExpr])
+              ..where(
+                _db.products.isActive.equals(true) &
+                    _db.products.stockQuantity.isSmallerOrEqualValue(0),
+              ))
+            .getSingle();
     return row.read(countExpr) ?? 0;
   }
 
   Future<int> getTotalProductsCount() async {
     final countExpr = _db.products.id.count();
-    final row =
-        await (_db.selectOnly(_db.products)..addColumns([countExpr])).getSingle();
+    final row = await (_db.selectOnly(
+      _db.products,
+    )..addColumns([countExpr])).getSingle();
     return row.read(countExpr) ?? 0;
   }
 
   /// Low stock products (stock <= reorder_level and stock > 0).
   Future<List<Product>> getLowStockProducts({int limit = 10}) async {
     return (_db.select(_db.products)
-          ..where((t) =>
-              t.isActive.equals(true) &
-              t.reorderLevel.isBiggerThanValue(0) &
-              t.stockQuantity.isBiggerThanValue(0) &
-              t.stockQuantity.isSmallerOrEqual(t.reorderLevel))
+          ..where(
+            (t) =>
+                t.isActive.equals(true) &
+                t.reorderLevel.isBiggerThanValue(0) &
+                t.stockQuantity.isBiggerThanValue(0) &
+                t.stockQuantity.isSmallerOrEqual(t.reorderLevel),
+          )
           ..orderBy([(t) => OrderingTerm.asc(t.name)])
           ..limit(limit))
         .get();

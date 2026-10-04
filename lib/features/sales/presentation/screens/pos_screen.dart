@@ -21,13 +21,25 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchController = TextEditingController();
   final _barcodeFocusNode = FocusNode();
   final _barcodeController = TextEditingController();
+  late final TextEditingController _discountController;
+  late final TextEditingController _paidAmountController;
 
   @override
   void initState() {
     super.initState();
+    _discountController = TextEditingController(
+      text: _moneyInputText(ref.read(posOrderDiscountProvider)),
+    );
+    _paidAmountController = TextEditingController(
+      text: _moneyInputText(ref.read(posPaidAmountProvider)),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _barcodeFocusNode.requestFocus();
     });
+  }
+
+  String _moneyInputText(double value) {
+    return value == 0 ? '' : value.toStringAsFixed(2);
   }
 
   @override
@@ -36,7 +48,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     _searchController.dispose();
     _barcodeFocusNode.dispose();
     _barcodeController.dispose();
+    _discountController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
+  }
+
+  void _clearPaymentInputs() {
+    _discountController.clear();
+    _paidAmountController.clear();
   }
 
   void _focusBarcodeField() {
@@ -73,9 +92,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ref.read(cartProvider.notifier).addItem(item);
       _barcodeController.clear();
       _focusBarcodeField();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Added: ${result.product!.name}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Added: ${result.product!.name}')));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -104,16 +123,18 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Future<void> _completeSale() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cart is empty')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cart is empty')));
       return;
     }
 
     final cashier = await ref.read(currentCashierProvider.future);
     if (cashier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No cashier configured. Add a user first.')),
+        const SnackBar(
+          content: Text('No cashier configured. Add a user first.'),
+        ),
       );
       return;
     }
@@ -123,7 +144,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     if (paid < total) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Paid amount (\$${paid.toStringAsFixed(2)}) must be >= total (\$${total.toStringAsFixed(2)})'),
+          content: Text(
+            'Paid amount (PKR ${paid.toStringAsFixed(2)}) must be >= total (PKR ${total.toStringAsFixed(2)})',
+          ),
         ),
       );
       return;
@@ -132,7 +155,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final prefs = await ref.read(systemPreferencesProvider.future);
 
     try {
-      final saleId = await ref.read(salesCheckoutServiceProvider).completeSale(
+      final saleId = await ref
+          .read(salesCheckoutServiceProvider)
+          .completeSale(
             items: cart,
             cashierId: cashier.id,
             customerId: ref.read(posCustomerIdProvider),
@@ -147,6 +172,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ref.read(posPaidAmountProvider.notifier).state = 0;
       ref.read(posCustomerIdProvider.notifier).state = null;
       ref.read(posPaymentMethodIdProvider.notifier).state = null;
+      _clearPaymentInputs();
       _barcodeController.clear();
       _searchController.clear();
       ref.read(posProductSearchQueryProvider.notifier).state = '';
@@ -157,12 +183,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
         if (prefs.autoPrintAfterSale) {
           try {
-            await ref.read(printServiceProvider).printThermalReceipt(context, saleId);
+            await ref
+                .read(printServiceProvider)
+                .printThermalReceipt(context, saleId);
           } catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Print failed: $e. You can reprint from sale details.'),
+                  content: Text(
+                    'Print failed: $e. You can reprint from sale details.',
+                  ),
                   backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
@@ -178,19 +208,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       }
     } on StateError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } on ArgumentError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Invalid input')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Invalid input')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -231,7 +261,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     if (!mounted) return;
 
     try {
-      await ref.read(heldCartsRepositoryProvider).holdCart(
+      await ref
+          .read(heldCartsRepositoryProvider)
+          .holdCart(
             items: cart,
             label: label,
             customerId: ref.read(posCustomerIdProvider),
@@ -244,20 +276,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ref.read(posPaidAmountProvider.notifier).state = 0;
       ref.read(posCustomerIdProvider.notifier).state = null;
       ref.read(posPaymentMethodIdProvider.notifier).state = null;
+      _clearPaymentInputs();
       _barcodeController.clear();
       _searchController.clear();
       ref.read(posProductSearchQueryProvider.notifier).state = '';
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cart put on hold')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cart put on hold')));
       _focusBarcodeField();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to hold cart: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to hold cart: $e')));
     }
   }
 
@@ -290,7 +323,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         final subtitle = [
                           '${h.itemCount} item${h.itemCount == 1 ? '' : 's'}',
                           if (h.customerName != null) h.customerName!,
-                          '\$${h.totalAmount.toStringAsFixed(2)}',
+                          'PKR ${h.totalAmount.toStringAsFixed(2)}',
                         ].join(' • ');
                         return ListTile(
                           title: Text(h.label),
@@ -301,7 +334,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 tooltip: 'Discard',
-                                onPressed: () => _discardHeldCart(h.id, h.label),
+                                onPressed: () =>
+                                    _discardHeldCart(h.id, h.label),
                               ),
                               FilledButton(
                                 onPressed: () {
@@ -396,7 +430,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
       if (action == 'hold') {
         try {
-          await ref.read(heldCartsRepositoryProvider).holdCart(
+          await ref
+              .read(heldCartsRepositoryProvider)
+              .holdCart(
                 items: currentCart,
                 customerId: ref.read(posCustomerIdProvider),
                 paymentMethodId: ref.read(posPaymentMethodIdProvider),
@@ -415,12 +451,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     if (!mounted) return;
 
     try {
-      final full = await ref.read(heldCartsRepositoryProvider).getFull(heldCartId);
+      final full = await ref
+          .read(heldCartsRepositoryProvider)
+          .getFull(heldCartId);
       if (full == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Held cart not found (it may have already been resumed).'),
+            content: Text(
+              'Held cart not found (it may have already been resumed).',
+            ),
           ),
         );
         return;
@@ -429,8 +469,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ref.read(cartProvider.notifier).loadItems(full.items);
       ref.read(posOrderDiscountProvider.notifier).state = full.orderDiscount;
       ref.read(posCustomerIdProvider.notifier).state = full.customerId;
-      ref.read(posPaymentMethodIdProvider.notifier).state = full.paymentMethodId;
+      ref.read(posPaymentMethodIdProvider.notifier).state =
+          full.paymentMethodId;
       ref.read(posPaidAmountProvider.notifier).state = 0;
+      _discountController.text = _moneyInputText(full.orderDiscount);
+      _paidAmountController.clear();
 
       await ref.read(heldCartsRepositoryProvider).delete(heldCartId);
 
@@ -447,9 +490,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       _focusBarcodeField();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to resume cart: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to resume cart: $e')));
     }
   }
 
@@ -487,7 +530,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final paymentMethodsAsync = ref.watch(activePaymentMethodsProvider);
     final subtotal = ref.watch(cartSubtotalProvider);
     final total = ref.watch(cartTotalProvider);
-    final paid = ref.watch(posPaidAmountProvider);
     final change = ref.watch(changeAmountProvider);
 
     return Padding(
@@ -524,9 +566,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         children: [
                           Text(
                             'Products',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -539,19 +580,32 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               isDense: true,
                             ),
                             onChanged: (v) =>
-                                ref.read(posProductSearchQueryProvider.notifier).state = v,
+                                ref
+                                        .read(
+                                          posProductSearchQueryProvider
+                                              .notifier,
+                                        )
+                                        .state =
+                                    v,
                           ),
                           const SizedBox(height: 16),
                           Expanded(
                             child: unitsAsync.when(
                               data: (units) {
-                                final unitMap = {for (final u in units) u.id: u.name};
+                                final unitMap = {
+                                  for (final u in units) u.id: u.name,
+                                };
                                 return productsAsync.when(
                                   data: (products) {
                                     if (products.isEmpty) {
                                       return Center(
                                         child: Text(
-                                          productsAsync.hasValue && ref.read(posProductSearchQueryProvider).isEmpty
+                                          productsAsync.hasValue &&
+                                                  ref
+                                                      .read(
+                                                        posProductSearchQueryProvider,
+                                                      )
+                                                      .isEmpty
                                               ? 'No active products'
                                               : 'No matching products',
                                         ),
@@ -561,26 +615,41 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                       itemCount: products.length,
                                       itemBuilder: (_, i) {
                                         final p = products[i];
-                                        final unitName = unitMap[p.unitId] ?? 'pc';
+                                        final unitName =
+                                            unitMap[p.unitId] ?? 'pc';
                                         return ListTile(
                                           title: Text(p.name),
-                                          subtitle: Text('${p.sku} • \$${p.salePrice.toStringAsFixed(2)} • Stock: ${p.stockQuantity.toStringAsFixed(0)}'),
+                                          subtitle: Text(
+                                            '${p.sku} • PKR ${p.salePrice.toStringAsFixed(2)} • Stock: ${p.stockQuantity.toStringAsFixed(0)}',
+                                          ),
                                           trailing: p.stockQuantity <= 0
-                                              ? const Text('Out of stock', style: TextStyle(color: Colors.red))
+                                              ? const Text(
+                                                  'Out of stock',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                )
                                               : FilledButton(
-                                                  onPressed: () => _addToCart(p, unitName),
+                                                  onPressed: () =>
+                                                      _addToCart(p, unitName),
                                                   child: const Text('Add'),
                                                 ),
                                         );
                                       },
                                     );
                                   },
-                                  loading: () => const Center(child: CircularProgressIndicator()),
-                                  error: (e, st) => Center(child: Text('Error: $e')),
+                                  loading: () => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  error: (e, st) =>
+                                      Center(child: Text('Error: $e')),
                                 );
                               },
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (e, st) => Center(child: Text('Error: $e')),
+                              loading: () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              error: (e, st) =>
+                                  Center(child: Text('Error: $e')),
                             ),
                           ),
                         ],
@@ -602,14 +671,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               Expanded(
                                 child: Text(
                                   'Cart',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
                               Consumer(
                                 builder: (context, ref, _) {
-                                  final heldAsync = ref.watch(heldCartsListProvider);
+                                  final heldAsync = ref.watch(
+                                    heldCartsListProvider,
+                                  );
                                   final count = heldAsync.maybeWhen(
                                     data: (l) => l.length,
                                     orElse: () => 0,
@@ -619,7 +689,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                     icon: Badge(
                                       label: Text('$count'),
                                       isLabelVisible: count > 0,
-                                      child: const Icon(Icons.pause_circle_outline, size: 18),
+                                      child: const Icon(
+                                        Icons.pause_circle_outline,
+                                        size: 18,
+                                      ),
                                     ),
                                     label: const Text('Held'),
                                   );
@@ -637,70 +710,85 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           Expanded(
                             flex: 2,
                             child: cart.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey.shade400),
-                                  const SizedBox(height: 16),
-                                  Text('Cart is empty', style: TextStyle(color: Colors.grey.shade600)),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: cart.length,
-                              itemBuilder: (_, i) {
-                                final item = cart[i];
-                                return _CartItemRow(
-                                  item: item,
-                                  onQuantityChanged: (q) => ref
-                                      .read(cartProvider.notifier)
-                                      .updateQuantity(item.product.id, q),
-                                  onRemove: () => ref
-                                      .read(cartProvider.notifier)
-                                      .removeItem(item.product.id),
-                                );
-                              },
-                            ),
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_cart_outlined,
+                                          size: 64,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Cart is empty',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: cart.length,
+                                    itemBuilder: (_, i) {
+                                      final item = cart[i];
+                                      return _CartItemRow(
+                                        item: item,
+                                        onQuantityChanged: (q) => ref
+                                            .read(cartProvider.notifier)
+                                            .updateQuantity(item.product.id, q),
+                                        onRemove: () => ref
+                                            .read(cartProvider.notifier)
+                                            .removeItem(item.product.id),
+                                      );
+                                    },
+                                  ),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
-                      key: ValueKey('discount_${ref.watch(posOrderDiscountProvider)}'),
-                      initialValue: ref.watch(posOrderDiscountProvider) == 0
-                          ? ''
-                          : ref.watch(posOrderDiscountProvider).toStringAsFixed(2),
-                      decoration: const InputDecoration(
-                        labelText: 'Order Discount',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            key: const ValueKey('pos-order-discount-field'),
+                            controller: _discountController,
+                            decoration: const InputDecoration(
+                              labelText: 'Order Discount',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             onChanged: (v) {
                               final n = double.tryParse(v) ?? 0;
-                              ref.read(posOrderDiscountProvider.notifier).state = n < 0 ? 0 : n;
+                              ref
+                                  .read(posOrderDiscountProvider.notifier)
+                                  .state = n < 0
+                                  ? 0
+                                  : n;
                             },
                           ),
                           const SizedBox(height: 12),
                           customersAsync.when(
-                            data: (customers) => _CustomerSelector(customers: customers),
+                            data: (customers) =>
+                                _CustomerSelector(customers: customers),
                             loading: () => const SizedBox(),
                             error: (_, __) => const SizedBox(),
                           ),
                           const SizedBox(height: 12),
                           _TotalsSection(
-                      subtotal: subtotal,
-                      orderDiscount: ref.watch(posOrderDiscountProvider),
-                      total: total,
-                      paid: paid,
-                      change: change,
-                      onDiscountChanged: (v) =>
-                          ref.read(posOrderDiscountProvider.notifier).state = v,
-                      onPaidChanged: (v) =>
-                          ref.read(posPaidAmountProvider.notifier).state = v,
-                    ),
+                            subtotal: subtotal,
+                            orderDiscount: ref.watch(posOrderDiscountProvider),
+                            total: total,
+                            change: change,
+                            paidAmountController: _paidAmountController,
+                            onPaidChanged: (v) =>
+                                ref.read(posPaidAmountProvider.notifier).state =
+                                    v,
+                          ),
                           const SizedBox(height: 12),
                           paymentMethodsAsync.when(
-                            data: (methods) => _PaymentMethodSelector(methods: methods),
+                            data: (methods) =>
+                                _PaymentMethodSelector(methods: methods),
                             loading: () => const SizedBox(),
                             error: (_, __) => const SizedBox(),
                           ),
@@ -713,7 +801,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   icon: const Icon(Icons.pause_circle_outline),
                                   label: const Text('Hold Cart'),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -721,25 +811,29 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               Expanded(
                                 flex: 2,
                                 child: FilledButton(
-                                  onPressed: cart.isEmpty ? null : _completeSale,
+                                  onPressed: cart.isEmpty
+                                      ? null
+                                      : _completeSale,
                                   style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                   ),
                                   child: const Text('Complete Sale'),
                                 ),
                               ),
                             ],
                           ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -767,8 +861,13 @@ class _CartItemRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  Text('${item.product.sku} • \$${item.unitPrice.toStringAsFixed(2)} x ${item.quantity.toStringAsFixed(0)}'),
+                  Text(
+                    item.product.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${item.product.sku} • PKR ${item.unitPrice.toStringAsFixed(2)} x ${item.quantity.toStringAsFixed(0)}',
+                  ),
                 ],
               ),
             ),
@@ -800,7 +899,7 @@ class _CartItemRow extends StatelessWidget {
             SizedBox(
               width: 70,
               child: Text(
-                '\$${item.lineTotal.toStringAsFixed(2)}',
+                'PKR ${item.lineTotal.toStringAsFixed(2)}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
                 textAlign: TextAlign.right,
               ),
@@ -829,7 +928,9 @@ class _CustomerSelector extends ConsumerWidget {
       ),
       items: [
         const DropdownMenuItem(value: null, child: Text('Walk-in')),
-        ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+        ...customers.map(
+          (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+        ),
       ],
       onChanged: (v) => ref.read(posCustomerIdProvider.notifier).state = v,
     );
@@ -853,34 +954,34 @@ class _PaymentMethodSelector extends ConsumerWidget {
       ),
       items: [
         const DropdownMenuItem(value: null, child: Text('Select')),
-        ...methods.map((m) => DropdownMenuItem(value: m.id, child: Text(m.name))),
+        ...methods.map(
+          (m) => DropdownMenuItem(value: m.id, child: Text(m.name)),
+        ),
       ],
       onChanged: (v) => ref.read(posPaymentMethodIdProvider.notifier).state = v,
     );
   }
 }
 
-class _TotalsSection extends ConsumerWidget {
+class _TotalsSection extends StatelessWidget {
   const _TotalsSection({
     required this.subtotal,
     required this.orderDiscount,
     required this.total,
-    required this.paid,
     required this.change,
-    required this.onDiscountChanged,
+    required this.paidAmountController,
     required this.onPaidChanged,
   });
 
   final double subtotal;
   final double orderDiscount;
   final double total;
-  final double paid;
   final double change;
-  final void Function(double) onDiscountChanged;
+  final TextEditingController paidAmountController;
   final void Function(double) onPaidChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Card(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Padding(
@@ -894,14 +995,16 @@ class _TotalsSection extends ConsumerWidget {
             _Row('Total', total, bold: true),
             const SizedBox(height: 12),
             TextFormField(
-              key: ValueKey('paid_$paid'),
-              initialValue: paid == 0 ? '' : paid.toStringAsFixed(2),
+              key: const ValueKey('pos-paid-amount-field'),
+              controller: paidAmountController,
               decoration: const InputDecoration(
                 labelText: 'Paid Amount',
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               onChanged: (v) {
                 final n = double.tryParse(v) ?? 0;
                 onPaidChanged(n < 0 ? 0 : n);
@@ -933,9 +1036,14 @@ class _Row extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
           Text(
-            '\$${value.toStringAsFixed(2)}',
+            label,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            'PKR ${value.toStringAsFixed(2)}',
             style: TextStyle(
               fontWeight: bold ? FontWeight.bold : FontWeight.normal,
               color: color,
