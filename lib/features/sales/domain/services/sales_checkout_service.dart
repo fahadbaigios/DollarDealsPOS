@@ -29,9 +29,9 @@ class SalesCheckoutService {
   /// Validate stock for all cart items. Throws if any item exceeds available stock.
   Future<void> validateStock(List<CartItem> items) async {
     for (final item in items) {
-      final product = await (_db.select(_db.products)
-            ..where((t) => t.id.equals(item.product.id)))
-          .getSingleOrNull();
+      final product = await (_db.select(
+        _db.products,
+      )..where((t) => t.id.equals(item.product.id))).getSingleOrNull();
       if (product == null) {
         throw StateError('Product ${item.product.name} not found');
       }
@@ -87,14 +87,17 @@ class SalesCheckoutService {
       final invoice = await generateInvoiceNumber();
       final saleDate = DateTime.now();
 
-      final saleId = await _db.into(_db.sales).insert(
+      final saleId = await _db
+          .into(_db.sales)
+          .insert(
             SalesCompanion.insert(
               cashierId: cashierId,
               paymentMethodId: paymentMethodId == null
                   ? const Value.absent()
                   : Value(paymentMethodId),
-              customerId:
-                  customerId == null ? const Value.absent() : Value(customerId),
+              customerId: customerId == null
+                  ? const Value.absent()
+                  : Value(customerId),
               invoiceNumber: invoice,
               saleDate: saleDate,
               subtotal: Value(subtotal),
@@ -111,7 +114,9 @@ class SalesCheckoutService {
           );
 
       for (final item in items) {
-        await _db.into(_db.saleItems).insert(
+        await _db
+            .into(_db.saleItems)
+            .insert(
               SaleItemsCompanion.insert(
                 saleId: saleId,
                 productId: item.product.id,
@@ -124,9 +129,9 @@ class SalesCheckoutService {
               ),
             );
 
-        final currentProduct = await (_db.select(_db.products)
-              ..where((t) => t.id.equals(item.product.id)))
-            .getSingle();
+        final currentProduct = await (_db.select(
+          _db.products,
+        )..where((t) => t.id.equals(item.product.id))).getSingle();
         final newStock = currentProduct.stockQuantity - item.quantity;
 
         if (!allowNegativeStock && newStock < 0) {
@@ -135,16 +140,18 @@ class SalesCheckoutService {
           );
         }
 
-        await (_db.update(_db.products)
-              ..where((t) => t.id.equals(item.product.id)))
-            .write(
-              ProductsCompanion(
-                stockQuantity: Value(newStock),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
+        await (_db.update(
+          _db.products,
+        )..where((t) => t.id.equals(item.product.id))).write(
+          ProductsCompanion(
+            stockQuantity: Value(newStock),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
 
-        await _db.into(_db.inventoryTransactions).insert(
+        await _db
+            .into(_db.inventoryTransactions)
+            .insert(
               InventoryTransactionsCompanion.insert(
                 productId: item.product.id,
                 transactionType: DatabaseConstants.transactionTypeSale,
@@ -168,7 +175,9 @@ class SalesCheckoutService {
         change: paidAmount > totalAmount ? paidAmount - totalAmount : 0,
       );
 
-      await _db.into(_db.receipts).insert(
+      await _db
+          .into(_db.receipts)
+          .insert(
             ReceiptsCompanion.insert(
               saleId: saleId,
               receiptContent: receiptContent,
@@ -197,19 +206,19 @@ class SalesCheckoutService {
     buffer.writeln('---');
     for (final item in items) {
       buffer.writeln(
-        '${item.product.name} x${item.quantity} @ \$${item.unitPrice.toStringAsFixed(2)} = \$${item.lineTotal.toStringAsFixed(2)}',
+        '${item.product.name} x${item.quantity} @ PKR ${item.unitPrice.toStringAsFixed(2)} = PKR ${item.lineTotal.toStringAsFixed(2)}',
       );
     }
     buffer.writeln('---');
-    buffer.writeln('Subtotal: \$${subtotal.toStringAsFixed(2)}');
+    buffer.writeln('Subtotal: PKR ${subtotal.toStringAsFixed(2)}');
     if (orderDiscount > 0) {
-      buffer.writeln('Discount: -\$${orderDiscount.toStringAsFixed(2)}');
+      buffer.writeln('Discount: -PKR ${orderDiscount.toStringAsFixed(2)}');
     }
-    buffer.writeln('Tax: \$${totalTax.toStringAsFixed(2)}');
-    buffer.writeln('Total: \$${totalAmount.toStringAsFixed(2)}');
-    buffer.writeln('Paid: \$${paidAmount.toStringAsFixed(2)}');
+    buffer.writeln('Tax: PKR ${totalTax.toStringAsFixed(2)}');
+    buffer.writeln('Total: PKR ${totalAmount.toStringAsFixed(2)}');
+    buffer.writeln('Paid: PKR ${paidAmount.toStringAsFixed(2)}');
     if (change > 0) {
-      buffer.writeln('Change: \$${change.toStringAsFixed(2)}');
+      buffer.writeln('Change: PKR ${change.toStringAsFixed(2)}');
     }
     buffer.writeln('===============');
     return buffer.toString();

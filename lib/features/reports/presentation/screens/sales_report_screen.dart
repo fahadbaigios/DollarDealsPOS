@@ -23,11 +23,13 @@ class SalesReportScreen extends ConsumerWidget {
     final usersAsync = ref.watch(reportUsersProvider);
     final customersAsync = ref.watch(reportCustomersProvider);
 
-    final cashierOptions = usersAsync.valueOrNull
+    final cashierOptions =
+        usersAsync.valueOrNull
             ?.map((u) => (id: (u as User).id, name: u.fullName))
             .toList() ??
         [];
-    final customerOptions = customersAsync.valueOrNull
+    final customerOptions =
+        customersAsync.valueOrNull
             ?.map((c) => (id: (c as Customer).id, name: c.name))
             .toList() ??
         [];
@@ -58,23 +60,27 @@ class SalesReportScreen extends ConsumerWidget {
             ),
             ReportSummaryCard(
               title: 'Total Revenue',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalRevenue),
+              value: NumberFormat.currency(
+                symbol: 'PKR ',
+              ).format(r.totalRevenue),
               icon: Icons.attach_money,
               iconColor: Colors.green,
             ),
             ReportSummaryCard(
               title: 'Total Discount',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalDiscount),
+              value: NumberFormat.currency(
+                symbol: 'PKR ',
+              ).format(r.totalDiscount),
               icon: Icons.discount,
             ),
             ReportSummaryCard(
               title: 'Total Tax',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalTax),
+              value: NumberFormat.currency(symbol: 'PKR ').format(r.totalTax),
               icon: Icons.percent,
             ),
             ReportSummaryCard(
               title: 'Total Due',
-              value: NumberFormat.currency(symbol: '\$').format(r.totalDue),
+              value: NumberFormat.currency(symbol: 'PKR ').format(r.totalDue),
               icon: Icons.pending,
               iconColor: Colors.orange,
             ),
@@ -97,7 +103,7 @@ class SalesReportScreen extends ConsumerWidget {
               icon: Icons.point_of_sale,
             );
           }
-          final currencyFormat = NumberFormat.currency(symbol: '\$');
+          final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
           final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
           return DataTableCard(
             child: SingleChildScrollView(
@@ -119,29 +125,41 @@ class SalesReportScreen extends ConsumerWidget {
                     DataColumn(label: Text('Status')),
                     DataColumn(label: Text('')),
                   ],
-                  rows: result.rows.map((r) => DataRow(
-                        cells: [
-                          DataCell(Text(r.invoiceNumber)),
-                          DataCell(Text(dateFormat.format(r.date))),
-                          DataCell(Text(r.customerName ?? '—')),
-                          DataCell(Text(r.cashierName ?? '—')),
-                          DataCell(Text(currencyFormat.format(r.subtotal))),
-                          DataCell(Text(currencyFormat.format(r.discount))),
-                          DataCell(Text(currencyFormat.format(r.tax))),
-                          DataCell(Text(currencyFormat.format(r.total))),
-                          DataCell(Text(currencyFormat.format(r.paid))),
-                          DataCell(Text(currencyFormat.format(r.due))),
-                          DataCell(PaymentStatusBadge(status: r.paymentStatus, compact: true)),
-                          DataCell(IconButton(
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => SaleDetailsScreen(saleId: r.sale.id),
+                  rows: result.rows
+                      .map(
+                        (r) => DataRow(
+                          cells: [
+                            DataCell(Text(r.invoiceNumber)),
+                            DataCell(Text(dateFormat.format(r.date))),
+                            DataCell(Text(r.customerName ?? '—')),
+                            DataCell(Text(r.cashierName ?? '—')),
+                            DataCell(Text(currencyFormat.format(r.subtotal))),
+                            DataCell(Text(currencyFormat.format(r.discount))),
+                            DataCell(Text(currencyFormat.format(r.tax))),
+                            DataCell(Text(currencyFormat.format(r.total))),
+                            DataCell(Text(currencyFormat.format(r.paid))),
+                            DataCell(Text(currencyFormat.format(r.due))),
+                            DataCell(
+                              PaymentStatusBadge(
+                                status: r.paymentStatus,
+                                compact: true,
                               ),
                             ),
-                          )),
-                        ],
-                      )).toList(),
+                            DataCell(
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SaleDetailsScreen(saleId: r.sale.id),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

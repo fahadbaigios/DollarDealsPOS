@@ -32,7 +32,8 @@ class SaleDetailsScreen extends ConsumerWidget {
                 ? ReceiptActionsMenu(
                     saleId: saleId,
                     invoiceNumber: sale.invoiceNumber,
-                    onReprintComplete: () => ref.invalidate(receiptForSaleProvider(saleId)),
+                    onReprintComplete: () =>
+                        ref.invalidate(receiptForSaleProvider(saleId)),
                   )
                 : const SizedBox.shrink(),
             loading: () => const SizedBox.shrink(),
@@ -55,10 +56,7 @@ class SaleDetailsScreen extends ConsumerWidget {
 }
 
 class _SaleContent extends ConsumerWidget {
-  const _SaleContent({
-    required this.sale,
-    required this.itemsAsync,
-  });
+  const _SaleContent({required this.sale, required this.itemsAsync});
 
   final Sale sale;
   final AsyncValue<List<SaleItem>> itemsAsync;
@@ -66,7 +64,9 @@ class _SaleContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final receiptAsync = ref.watch(receiptForSaleProvider(sale.id));
-    return FutureBuilder<({Customer? customer, PaymentMethod? paymentMethod, User? cashier})>(
+    return FutureBuilder<
+      ({Customer? customer, PaymentMethod? paymentMethod, User? cashier})
+    >(
       future: () async {
         final customersRepo = ref.read(customersRepositoryProvider);
         final paymentRepo = ref.read(paymentMethodsRepositoryProvider);
@@ -78,7 +78,11 @@ class _SaleContent extends ConsumerWidget {
             ? await paymentRepo.getById(sale.paymentMethodId!)
             : null;
         final cashier = await usersRepo.getById(sale.cashierId);
-        return (customer: customer, paymentMethod: paymentMethod, cashier: cashier);
+        return (
+          customer: customer,
+          paymentMethod: paymentMethod,
+          cashier: cashier,
+        );
       }(),
       builder: (context, snap) {
         final customer = snap.data?.customer;
@@ -96,14 +100,20 @@ class _SaleContent extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Sale Info', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Sale Info',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 16),
                       _DetailRow('Invoice', sale.invoiceNumber),
                       _DetailRow('Date', sale.saleDate.toIso8601String()),
                       _DetailRow('Customer', customer?.name ?? 'Walk-in'),
                       _DetailRow('Cashier', cashier?.fullName ?? '-'),
                       _DetailRow('Payment Method', paymentMethod?.name ?? '-'),
-                      _DetailRow('Status', PaymentStatusBadge(status: sale.paymentStatus)),
+                      _DetailRow(
+                        'Status',
+                        PaymentStatusBadge(status: sale.paymentStatus),
+                      ),
                       receiptAsync.when(
                         data: (r) => r != null
                             ? _DetailRow(
@@ -125,14 +135,35 @@ class _SaleContent extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Totals', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Totals',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 16),
-                      _DetailRow('Subtotal', '\$${sale.subtotal.toStringAsFixed(2)}'),
-                      _DetailRow('Discount', '\$${(-sale.discountAmount).toStringAsFixed(2)}'),
-                      _DetailRow('Tax', '\$${sale.taxAmount.toStringAsFixed(2)}'),
-                      _DetailRow('Total', '\$${sale.totalAmount.toStringAsFixed(2)}'),
-                      _DetailRow('Paid', '\$${sale.paidAmount.toStringAsFixed(2)}'),
-                      _DetailRow('Due', '\$${sale.dueAmount.toStringAsFixed(2)}'),
+                      _DetailRow(
+                        'Subtotal',
+                        'PKR ${sale.subtotal.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Discount',
+                        'PKR ${(-sale.discountAmount).toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Tax',
+                        'PKR ${sale.taxAmount.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Total',
+                        'PKR ${sale.totalAmount.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Paid',
+                        'PKR ${sale.paidAmount.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Due',
+                        'PKR ${sale.dueAmount.toStringAsFixed(2)}',
+                      ),
                       if (sale.notes != null && sale.notes!.isNotEmpty)
                         _DetailRow('Notes', sale.notes!),
                     ],
@@ -146,7 +177,10 @@ class _SaleContent extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Items', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Items',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 16),
                       itemsAsync.when(
                         data: (items) => _ItemsTable(items: items),
@@ -195,16 +229,22 @@ class _ItemsTable extends ConsumerWidget {
               DataColumn(label: Text('Tax'), numeric: true),
               DataColumn(label: Text('Total'), numeric: true),
             ],
-            rows: items.map((i) => DataRow(
-              cells: [
-                DataCell(Text(names[i.productId] ?? '...')),
-                DataCell(Text(i.quantity.toStringAsFixed(0))),
-                DataCell(Text('\$${i.unitPrice.toStringAsFixed(2)}')),
-                DataCell(Text('\$${i.itemDiscount.toStringAsFixed(2)}')),
-                DataCell(Text('\$${i.itemTax.toStringAsFixed(2)}')),
-                DataCell(Text('\$${i.totalAmount.toStringAsFixed(2)}')),
-              ],
-            )).toList(),
+            rows: items
+                .map(
+                  (i) => DataRow(
+                    cells: [
+                      DataCell(Text(names[i.productId] ?? '...')),
+                      DataCell(Text(i.quantity.toStringAsFixed(0))),
+                      DataCell(Text('PKR ${i.unitPrice.toStringAsFixed(2)}')),
+                      DataCell(
+                        Text('PKR ${i.itemDiscount.toStringAsFixed(2)}'),
+                      ),
+                      DataCell(Text('PKR ${i.itemTax.toStringAsFixed(2)}')),
+                      DataCell(Text('PKR ${i.totalAmount.toStringAsFixed(2)}')),
+                    ],
+                  ),
+                )
+                .toList(),
           ),
         );
       },
@@ -229,7 +269,9 @@ class _DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               '$label:',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(

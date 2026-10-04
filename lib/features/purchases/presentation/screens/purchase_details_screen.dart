@@ -28,7 +28,8 @@ class PurchaseDetailsScreen extends ConsumerWidget {
         return _PurchaseDetailsContent(
           purchase: purchase,
           itemsAsync: itemsAsync,
-          supplierName: suppliersAsync.valueOrNull
+          supplierName:
+              suppliersAsync.valueOrNull
                   ?.where((s) => s.id == purchase.supplierId)
                   .map((s) => s.name)
                   .firstOrNull ??
@@ -79,12 +80,12 @@ class _PurchaseDetailsContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _InfoCard(
-                  purchase: purchase,
-                  supplierName: supplierName,
-                ),
+                _InfoCard(purchase: purchase, supplierName: supplierName),
                 const SizedBox(height: 24),
-                _ItemsCard(itemsAsync: itemsAsync, getProductName: getProductName),
+                _ItemsCard(
+                  itemsAsync: itemsAsync,
+                  getProductName: getProductName,
+                ),
                 const SizedBox(height: 24),
                 _TotalsCard(purchase: purchase),
               ],
@@ -97,10 +98,7 @@ class _PurchaseDetailsContent extends StatelessWidget {
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.purchase,
-    required this.supplierName,
-  });
+  const _InfoCard({required this.purchase, required this.supplierName});
 
   final Purchase purchase;
   final String supplierName;
@@ -113,7 +111,10 @@ class _InfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Purchase Info', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Purchase Info',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 16),
             _InfoRow('Supplier', supplierName),
             _InfoRow('Invoice', purchase.invoiceNumber ?? '—'),
@@ -146,7 +147,10 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
           Expanded(child: Text(value)),
         ],
@@ -156,10 +160,7 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _ItemsCard extends StatelessWidget {
-  const _ItemsCard({
-    required this.itemsAsync,
-    required this.getProductName,
-  });
+  const _ItemsCard({required this.itemsAsync, required this.getProductName});
 
   final AsyncValue<List<PurchaseItem>> itemsAsync;
   final Future<String> Function(int) getProductName;
@@ -175,7 +176,8 @@ class _ItemsCard extends StatelessWidget {
             Text('Items', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             itemsAsync.when(
-              data: (items) => _ItemsTable(items: items, getProductName: getProductName),
+              data: (items) =>
+                  _ItemsTable(items: items, getProductName: getProductName),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Text('Error: $e'),
             ),
@@ -187,10 +189,7 @@ class _ItemsCard extends StatelessWidget {
 }
 
 class _ItemsTable extends StatelessWidget {
-  const _ItemsTable({
-    required this.items,
-    required this.getProductName,
-  });
+  const _ItemsTable({required this.items, required this.getProductName});
 
   final List<PurchaseItem> items;
   final Future<String> Function(int) getProductName;
@@ -216,14 +215,17 @@ class _ItemsTable extends StatelessWidget {
   DataRow _buildRow(BuildContext context, PurchaseItem item) {
     return DataRow(
       cells: [
-        DataCell(FutureBuilder<String>(
-          future: getProductName(item.productId),
-          builder: (_, snap) => Text(snap.data ?? '...'))),
+        DataCell(
+          FutureBuilder<String>(
+            future: getProductName(item.productId),
+            builder: (_, snap) => Text(snap.data ?? '...'),
+          ),
+        ),
         DataCell(Text(item.quantity.toStringAsFixed(0))),
-        DataCell(Text('\$${item.unitCost.toStringAsFixed(2)}')),
-        DataCell(Text('\$${item.itemDiscount.toStringAsFixed(2)}')),
-        DataCell(Text('\$${item.itemTax.toStringAsFixed(2)}')),
-        DataCell(Text('\$${item.totalCost.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${item.unitCost.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${item.itemDiscount.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${item.itemTax.toStringAsFixed(2)}')),
+        DataCell(Text('PKR ${item.totalCost.toStringAsFixed(2)}')),
       ],
     );
   }
@@ -275,9 +277,12 @@ class _TotalRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: bold ? FontWeight.bold : null)),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            label,
+            style: TextStyle(fontWeight: bold ? FontWeight.bold : null),
+          ),
+          Text(
+            'PKR ${amount.toStringAsFixed(2)}',
             style: TextStyle(fontWeight: bold ? FontWeight.bold : null),
           ),
         ],

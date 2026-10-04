@@ -17,7 +17,7 @@ class ProfitLossReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(reportFilterStateProvider);
     final reportAsync = ref.watch(profitLossReportProvider);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    final currencyFormat = NumberFormat.currency(symbol: 'PKR ');
 
     return ReportPageScaffold(
       title: 'Profit/Loss Report',
@@ -77,7 +77,8 @@ class ProfitLossReportScreen extends ConsumerWidget {
       ],
       child: reportAsync.when(
         data: (result) {
-          final hasDetails = result.topSellingProducts.isNotEmpty ||
+          final hasDetails =
+              result.topSellingProducts.isNotEmpty ||
               result.expenseByCategory.isNotEmpty;
           if (!hasDetails) {
             return const EmptyState(
@@ -93,8 +94,8 @@ class ProfitLossReportScreen extends ConsumerWidget {
                   Text(
                     'Top Selling Products',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   DataTableCard(
@@ -106,13 +107,19 @@ class ProfitLossReportScreen extends ConsumerWidget {
                           DataColumn(label: Text('Quantity')),
                           DataColumn(label: Text('Revenue')),
                         ],
-                        rows: result.topSellingProducts.map((p) => DataRow(
-                              cells: [
-                                DataCell(Text(p.name)),
-                                DataCell(Text(p.quantity.toStringAsFixed(1))),
-                                DataCell(Text(currencyFormat.format(p.revenue))),
-                              ],
-                            )).toList(),
+                        rows: result.topSellingProducts
+                            .map(
+                              (p) => DataRow(
+                                cells: [
+                                  DataCell(Text(p.name)),
+                                  DataCell(Text(p.quantity.toStringAsFixed(1))),
+                                  DataCell(
+                                    Text(currencyFormat.format(p.revenue)),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),
@@ -122,8 +129,8 @@ class ProfitLossReportScreen extends ConsumerWidget {
                   Text(
                     'Expenses by Category',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   DataTableCard(
@@ -134,12 +141,18 @@ class ProfitLossReportScreen extends ConsumerWidget {
                           DataColumn(label: Text('Category')),
                           DataColumn(label: Text('Amount')),
                         ],
-                        rows: result.expenseByCategory.entries.map((e) => DataRow(
-                              cells: [
-                                DataCell(Text(e.key)),
-                                DataCell(Text(currencyFormat.format(e.value))),
-                              ],
-                            )).toList(),
+                        rows: result.expenseByCategory.entries
+                            .map(
+                              (e) => DataRow(
+                                cells: [
+                                  DataCell(Text(e.key)),
+                                  DataCell(
+                                    Text(currencyFormat.format(e.value)),
+                                  ),
+                                ],
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),

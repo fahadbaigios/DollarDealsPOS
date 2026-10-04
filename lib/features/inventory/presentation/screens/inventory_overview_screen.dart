@@ -28,8 +28,8 @@ class InventoryOverviewScreen extends ConsumerWidget {
                 child: Text(
                   'Inventory Overview',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               FilledButton.icon(
@@ -57,9 +57,13 @@ class InventoryOverviewScreen extends ConsumerWidget {
                     count: s.lowStockCount,
                     icon: Icons.warning_amber_outlined,
                     color: Colors.orange,
-                    onTap: () => ref
-                        .read(inventoryStockStatusFilterProvider.notifier)
-                        .state = 'low_stock',
+                    onTap: () =>
+                        ref
+                                .read(
+                                  inventoryStockStatusFilterProvider.notifier,
+                                )
+                                .state =
+                            'low_stock',
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -69,9 +73,13 @@ class InventoryOverviewScreen extends ConsumerWidget {
                     count: s.outOfStockCount,
                     icon: Icons.remove_shopping_cart_outlined,
                     color: Colors.red,
-                    onTap: () => ref
-                        .read(inventoryStockStatusFilterProvider.notifier)
-                        .state = 'out_of_stock',
+                    onTap: () =>
+                        ref
+                                .read(
+                                  inventoryStockStatusFilterProvider.notifier,
+                                )
+                                .state =
+                            'out_of_stock',
                   ),
                 ),
               ],
@@ -87,7 +95,8 @@ class InventoryOverviewScreen extends ConsumerWidget {
               data: (items) => _InventoryTable(
                 items: items,
                 onViewDetail: (v) => _openProductDetail(context, ref, v),
-                onAdjust: (v) => _showAdjustmentDialog(context, ref, product: v.product),
+                onAdjust: (v) =>
+                    _showAdjustmentDialog(context, ref, product: v.product),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
@@ -98,8 +107,11 @@ class InventoryOverviewScreen extends ConsumerWidget {
     );
   }
 
-  void _showAdjustmentDialog(BuildContext context, WidgetRef ref,
-      {Product? product}) {
+  void _showAdjustmentDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    Product? product,
+  }) {
     showDialog<bool>(
       context: context,
       builder: (ctx) => StockAdjustmentDialog(product: product),
@@ -110,11 +122,12 @@ class InventoryOverviewScreen extends ConsumerWidget {
   }
 
   void _openProductDetail(
-      BuildContext context, WidgetRef ref, ProductInventoryView view) {
+    BuildContext context,
+    WidgetRef ref,
+    ProductInventoryView view,
+  ) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (ctx) => _ProductDetailPage(view: view),
-      ),
+      MaterialPageRoute<void>(builder: (ctx) => _ProductDetailPage(view: view)),
     );
   }
 }
@@ -156,11 +169,13 @@ class _FilterBar extends ConsumerWidget {
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             items: [
-              const DropdownMenuItem(value: null, child: Text('All Categories')),
-              ...cats.map((c) => DropdownMenuItem(
-                    value: c.id,
-                    child: Text(c.name),
-                  )),
+              const DropdownMenuItem(
+                value: null,
+                child: Text('All Categories'),
+              ),
+              ...cats.map(
+                (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ),
             ],
             onChanged: (v) =>
                 ref.read(inventoryCategoryFilterProvider.notifier).state = v,
@@ -194,7 +209,10 @@ class _FilterBar extends ConsumerWidget {
             DropdownMenuItem(value: null, child: Text('All Status')),
             DropdownMenuItem(value: 'normal', child: Text('Normal')),
             DropdownMenuItem(value: 'low_stock', child: Text('Low Stock')),
-            DropdownMenuItem(value: 'out_of_stock', child: Text('Out of Stock')),
+            DropdownMenuItem(
+              value: 'out_of_stock',
+              child: Text('Out of Stock'),
+            ),
           ],
           onChanged: (v) =>
               ref.read(inventoryStockStatusFilterProvider.notifier).state = v,
@@ -208,7 +226,8 @@ class _FilterBar extends ConsumerWidget {
               ref.read(inventorySearchQueryProvider.notifier).state = '';
               ref.read(inventoryCategoryFilterProvider.notifier).state = null;
               ref.read(inventoryActiveFilterProvider.notifier).state = null;
-              ref.read(inventoryStockStatusFilterProvider.notifier).state = null;
+              ref.read(inventoryStockStatusFilterProvider.notifier).state =
+                  null;
             },
             icon: const Icon(Icons.clear),
             label: const Text('Clear'),
@@ -236,7 +255,11 @@ class _InventoryTable extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey.shade400),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
             const SizedBox(height: 16),
             Text(
               'No products match your filters',
@@ -279,7 +302,10 @@ class _InventoryTable extends StatelessWidget {
         DataCell(
           TextButton(
             onPressed: () => onViewDetail(v),
-            child: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+            child: Text(
+              p.name,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
         ),
         DataCell(Text(p.sku)),
@@ -289,10 +315,12 @@ class _InventoryTable extends StatelessWidget {
         DataCell(Text(v.unitName)),
         DataCell(Text(p.stockQuantity.toStringAsFixed(0))),
         DataCell(Text(p.reorderLevel.toStringAsFixed(0))),
-        DataCell(StockStatusBadge(
-          status: p.isActive ? v.stockStatus : 'inactive',
-          compact: true,
-        )),
+        DataCell(
+          StockStatusBadge(
+            status: p.isActive ? v.stockStatus : 'inactive',
+            compact: true,
+          ),
+        ),
         DataCell(Text(p.isActive ? 'Yes' : 'No')),
         DataCell(
           IconButton(
@@ -313,8 +341,9 @@ class _ProductDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync =
-        ref.watch(productRecentTransactionsProvider(view.product.id));
+    final transactionsAsync = ref.watch(
+      productRecentTransactionsProvider(view.product.id),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -328,7 +357,9 @@ class _ProductDetailPage extends ConsumerWidget {
                 builder: (ctx) => StockAdjustmentDialog(product: view.product),
               ).then((_) {
                 ref.invalidate(productInventoryDetailProvider(view.product.id));
-                ref.invalidate(productRecentTransactionsProvider(view.product.id));
+                ref.invalidate(
+                  productRecentTransactionsProvider(view.product.id),
+                );
               });
             },
             tooltip: 'Adjust stock',
@@ -348,27 +379,39 @@ class _ProductDetailPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Product Details',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Product Details',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 16),
                       _DetailRow('SKU', view.product.sku),
                       _DetailRow('Category', view.categoryName),
                       _DetailRow('Supplier', view.supplierName ?? '-'),
                       _DetailRow('Unit', view.unitName),
-                      _DetailRow('Current Stock',
-                          view.product.stockQuantity.toStringAsFixed(0)),
-                      _DetailRow('Reorder Level',
-                          view.product.reorderLevel.toStringAsFixed(0)),
-                      _DetailRow('Cost Price',
-                          '\$${view.product.costPrice.toStringAsFixed(2)}'),
-                      _DetailRow('Selling Price',
-                          '\$${view.product.salePrice.toStringAsFixed(2)}'),
-                      _DetailRow('Status',
-                          StockStatusBadge(
-                            status: view.product.isActive
-                                ? view.stockStatus
-                                : 'inactive',
-                          )),
+                      _DetailRow(
+                        'Current Stock',
+                        view.product.stockQuantity.toStringAsFixed(0),
+                      ),
+                      _DetailRow(
+                        'Reorder Level',
+                        view.product.reorderLevel.toStringAsFixed(0),
+                      ),
+                      _DetailRow(
+                        'Cost Price',
+                        'PKR ${view.product.costPrice.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Selling Price',
+                        'PKR ${view.product.salePrice.toStringAsFixed(2)}',
+                      ),
+                      _DetailRow(
+                        'Status',
+                        StockStatusBadge(
+                          status: view.product.isActive
+                              ? view.stockStatus
+                              : 'inactive',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -383,15 +426,15 @@ class _ProductDetailPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Recent Transactions',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Recent Transactions',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: transactionsAsync.when(
                           data: (txs) => txs.isEmpty
-                              ? const Center(
-                                  child: Text('No transactions yet'),
-                                )
+                              ? const Center(child: Text('No transactions yet'))
                               : ListView.builder(
                                   itemCount: txs.length,
                                   itemBuilder: (_, i) {
@@ -404,7 +447,7 @@ class _ProductDetailPage extends ConsumerWidget {
                                       ),
                                       trailing: Text(
                                         t.unitCost != null
-                                            ? '\$${t.unitCost!.toStringAsFixed(2)}'
+                                            ? 'PKR ${t.unitCost!.toStringAsFixed(2)}'
                                             : '-',
                                       ),
                                     );
@@ -450,9 +493,7 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: value is Widget
-                ? value
-                : Text(value?.toString() ?? '-'),
+            child: value is Widget ? value : Text(value?.toString() ?? '-'),
           ),
         ],
       ),

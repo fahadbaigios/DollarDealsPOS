@@ -20,8 +20,8 @@ class SettingsRepository {
       phone: map['phone'] ?? '',
       email: map['email'] ?? '',
       ntmOrTaxNumber: map['ntm_or_tax_number'] ?? '',
-      currencyCode: map['currency_code'] ?? 'USD',
-      currencySymbol: map['currency_symbol'] ?? '\$',
+      currencyCode: map['currency_code'] ?? 'PKR',
+      currencySymbol: map['currency_symbol'] ?? 'PKR ',
       receiptFooter: map['receipt_footer'] ?? 'Thank you for your business!',
       logoPath: map['logo_path'],
       taxEnabled: (map['tax_enabled'] ?? 'false') == 'true',
@@ -48,12 +48,15 @@ class SettingsRepository {
   Future<SystemPreferences> getSystemPreferences() async {
     final map = await _businessSettingsRepo.getAllAsMap();
     return SystemPreferences(
-      allowNegativeStock: (map['app_allow_negative_stock'] ?? 'false') == 'true',
-      autoPrintAfterSale: (map['app_auto_print_after_sale'] ?? 'false') == 'true',
+      allowNegativeStock:
+          (map['app_allow_negative_stock'] ?? 'false') == 'true',
+      autoPrintAfterSale:
+          (map['app_auto_print_after_sale'] ?? 'false') == 'true',
       confirmBeforeCompletingSale:
           (map['app_confirm_before_sale'] ?? 'false') == 'true',
       showPhoneOnReceipt: (map['receipt_show_phone'] ?? 'true') == 'true',
-      showTaxNumberOnReceipt: (map['receipt_show_tax_number'] ?? 'true') == 'true',
+      showTaxNumberOnReceipt:
+          (map['receipt_show_tax_number'] ?? 'true') == 'true',
     );
   }
 
@@ -75,14 +78,17 @@ class SettingsRepository {
   }
 
   Future<List<PrinterSetting>> getAllPrinters() async {
-    return (_db.select(_db.printerSettings)
-          ..orderBy([(t) => OrderingTerm.desc(t.isDefault), (t) => OrderingTerm.asc(t.id)]))
+    return (_db.select(_db.printerSettings)..orderBy([
+          (t) => OrderingTerm.desc(t.isDefault),
+          (t) => OrderingTerm.asc(t.id),
+        ]))
         .get();
   }
 
   Future<PrinterSetting?> getPrinterById(int id) async {
-    return (_db.select(_db.printerSettings)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.printerSettings,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> savePrinter({
@@ -101,20 +107,26 @@ class SettingsRepository {
     if (id != null) {
       final existing = await getPrinterById(id);
       if (existing != null) {
-        await _db.update(_db.printerSettings).replace(
-              existing.copyWith(
-                printerName: printerName,
-                printerType: printerType,
-                paperWidth: paperWidth,
-                isDefault: isDefault,
-                copies: copies,
-                updatedAt: DateTime.now(),
-              ).toCompanion(true),
+        await _db
+            .update(_db.printerSettings)
+            .replace(
+              existing
+                  .copyWith(
+                    printerName: printerName,
+                    printerType: printerType,
+                    paperWidth: paperWidth,
+                    isDefault: isDefault,
+                    copies: copies,
+                    updatedAt: DateTime.now(),
+                  )
+                  .toCompanion(true),
             );
         return id;
       }
     }
-    return _db.into(_db.printerSettings).insert(
+    return _db
+        .into(_db.printerSettings)
+        .insert(
           PrinterSettingsCompanion.insert(
             printerName: printerName,
             printerType: printerType,
