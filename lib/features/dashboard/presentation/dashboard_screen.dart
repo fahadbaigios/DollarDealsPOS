@@ -344,13 +344,15 @@ class _RecentSalesSection extends ConsumerWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Text(
-                      'Recent Sales',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        'Recent Sales',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    const Spacer(),
                     TextButton(
                       onPressed: () => context.go(RouteNames.salesHistoryPath),
                       child: const Text('View all'),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/route_names.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/cash_drawer/presentation/screens/cash_drawer_screen.dart';
 import '../../features/products/presentation/screens/products_screen.dart';
 import '../../features/purchases/presentation/screens/create_purchase_screen.dart';
 import '../../features/purchases/presentation/screens/purchase_details_screen.dart';
@@ -88,6 +89,12 @@ final GoRouter appRouter = GoRouter(
                   state.uri.queryParameters['tab'] == 'history',
             ),
           ),
+        ),
+        GoRoute(
+          path: RouteNames.cashDrawerPath,
+          name: RouteNames.cashDrawer,
+          pageBuilder: (context, state) =>
+              _buildPage(state: state, child: const CashDrawerScreen()),
         ),
         GoRoute(
           path: RouteNames.inventoryPath,
