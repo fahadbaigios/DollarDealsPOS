@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'database_connection.dart';
 import 'tables/business_settings_table.dart';
+import 'tables/cash_drawer_movements_table.dart';
 import 'tables/printer_settings_table.dart';
 import 'tables/categories_table.dart';
 import 'tables/customers_table.dart';
@@ -46,6 +47,7 @@ part 'app_database.g.dart';
     PrinterSettings,
     HeldCarts,
     HeldCartItems,
+    CashDrawerMovements,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -55,7 +57,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -137,8 +139,42 @@ class AppDatabase extends _$AppDatabase {
           "INSERT INTO payment_methods (name, is_active) SELECT 'JazzCash/Easypaisa', 1 WHERE NOT EXISTS (SELECT 1 FROM payment_methods WHERE lower(name) = lower('JazzCash/Easypaisa'));",
         );
       }
+      if (from < 13) {
+        await _ensureSimpleCashDrawerSchema(m);
+      }
     },
   );
+
+  Future<void> _ensureSimpleCashDrawerSchema(Migrator m) async {
+    final tableInfo = await customSelect(
+      "PRAGMA table_info('cash_drawer_movements')",
+    ).get();
+    final columns = tableInfo.map((row) => row.read<String>('name')).toSet();
+    const requiredColumns = {
+      'id',
+      'movement_type',
+      'amount_minor',
+      'sale_id',
+      'note',
+      'created_at',
+    };
+
+    if (columns.isNotEmpty && !columns.containsAll(requiredColumns)) {
+      // Remove only the tables left by the discarded session-based drawer.
+      // Child tables must be removed before their referenced parent tables.
+      await customStatement('DROP TABLE IF EXISTS cash_drawer_movement_notes;');
+      await customStatement('DROP TABLE IF EXISTS cash_drawer_count_lines;');
+      await customStatement('DROP TABLE IF EXISTS cash_drawer_counts;');
+      await customStatement('DROP TABLE IF EXISTS cash_drawer_movements;');
+      await customStatement('DROP TABLE IF EXISTS cash_denominations;');
+      await customStatement('DROP TABLE IF EXISTS cash_drawer_sessions;');
+      columns.clear();
+    }
+
+    if (columns.isEmpty) {
+      await m.createTable(cashDrawerMovements);
+    }
+  }
 
   /// Seeds default roles, payment methods, and expense categories.
   Future<void> _seedInitialData() async {

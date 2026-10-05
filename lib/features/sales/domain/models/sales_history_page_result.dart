@@ -9,6 +9,7 @@ class SalesHistoryPageResult {
     required this.pageSize,
     required this.customerNamesBySaleId,
     required this.cashierNamesBySaleId,
+    required this.paymentMethodNamesBySaleId,
   });
 
   final List<Sale> sales;
@@ -19,6 +20,7 @@ class SalesHistoryPageResult {
   /// Keyed by sale id (not customer id) for convenient table lookup.
   final Map<int, String> customerNamesBySaleId;
   final Map<int, String> cashierNamesBySaleId;
+  final Map<int, String> paymentMethodNamesBySaleId;
 
   int get totalPages =>
       totalCount == 0 ? 1 : ((totalCount + pageSize - 1) ~/ pageSize);

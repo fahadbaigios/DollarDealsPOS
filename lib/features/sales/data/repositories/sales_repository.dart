@@ -13,9 +13,9 @@ class SalesRepository {
   final UsersRepository _usersRepo;
 
   Stream<List<Sale>> watchAll() {
-    return (_db.select(_db.sales)
-          ..orderBy([(t) => OrderingTerm.desc(t.saleDate)]))
-        .watch();
+    return (_db.select(
+      _db.sales,
+    )..orderBy([(t) => OrderingTerm.desc(t.saleDate)])).watch();
   }
 
   Expression<bool> _buildSearchWhere({
@@ -39,11 +39,7 @@ class SalesRepository {
     return cond;
   }
 
-  Stream<List<Sale>> search({
-    String? query,
-    DateTime? from,
-    DateTime? to,
-  }) {
+  Stream<List<Sale>> search({String? query, DateTime? from, DateTime? to}) {
     if ((query == null || query.trim().isEmpty) && from == null && to == null) {
       return watchAll();
     }
@@ -54,16 +50,13 @@ class SalesRepository {
         .watch();
   }
 
-  Future<int> countSearch({
-    String? query,
-    DateTime? from,
-    DateTime? to,
-  }) async {
+  Future<int> countSearch({String? query, DateTime? from, DateTime? to}) async {
     final countExpr = _db.sales.id.count();
-    final row = await (_db.selectOnly(_db.sales)
-          ..addColumns([countExpr])
-          ..where(_buildSearchWhere(query: query, from: from, to: to)))
-        .getSingle();
+    final row =
+        await (_db.selectOnly(_db.sales)
+              ..addColumns([countExpr])
+              ..where(_buildSearchWhere(query: query, from: from, to: to)))
+            .getSingle();
     return row.read(countExpr) ?? 0;
   }
 
@@ -90,8 +83,9 @@ class SalesRepository {
     required int page,
     required int pageSize,
   }) async {
-    final normalizedQuery =
-        (query == null || query.trim().isEmpty) ? null : query.trim();
+    final normalizedQuery = (query == null || query.trim().isEmpty)
+        ? null
+        : query.trim();
     final offset = page * pageSize;
 
     final totalCount = await countSearch(
@@ -107,23 +101,37 @@ class SalesRepository {
       offset: offset,
     );
 
-    final customerIds =
-        sales.map((s) => s.customerId).whereType<int>().toSet();
+    final customerIds = sales.map((s) => s.customerId).whereType<int>().toSet();
     final cashierIds = sales.map((s) => s.cashierId).toSet();
+    final paymentMethodIds = sales
+        .map((s) => s.paymentMethodId)
+        .whereType<int>()
+        .toSet();
 
     final customers = await _customersRepo.getByIds(customerIds);
     final users = await _usersRepo.getByIds(cashierIds);
+    final paymentMethods = paymentMethodIds.isEmpty
+        ? <PaymentMethod>[]
+        : await (_db.select(
+            _db.paymentMethods,
+          )..where((t) => t.id.isIn(paymentMethodIds))).get();
     final customerById = {for (final c in customers) c.id: c.name};
     final cashierById = {for (final u in users) u.id: u.fullName};
+    final paymentMethodById = {
+      for (final method in paymentMethods) method.id: method.name,
+    };
 
     final customerNamesBySaleId = <int, String>{};
     final cashierNamesBySaleId = <int, String>{};
+    final paymentMethodNamesBySaleId = <int, String>{};
     for (final sale in sales) {
       customerNamesBySaleId[sale.id] = sale.customerId == null
           ? 'Walk-in'
           : (customerById[sale.customerId] ?? '-');
-      cashierNamesBySaleId[sale.id] =
-          cashierById[sale.cashierId] ?? '-';
+      cashierNamesBySaleId[sale.id] = cashierById[sale.cashierId] ?? '-';
+      paymentMethodNamesBySaleId[sale.id] = sale.paymentMethodId == null
+          ? '-'
+          : (paymentMethodById[sale.paymentMethodId] ?? '-');
     }
 
     return SalesHistoryPageResult(
@@ -133,25 +141,28 @@ class SalesRepository {
       pageSize: pageSize,
       customerNamesBySaleId: customerNamesBySaleId,
       cashierNamesBySaleId: cashierNamesBySaleId,
+      paymentMethodNamesBySaleId: paymentMethodNamesBySaleId,
     );
   }
 
   Future<Sale?> getById(int id) async {
-    return (_db.select(_db.sales)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.sales,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<List<SaleItem>> getSaleItems(int saleId) async {
-    return (_db.select(_db.saleItems)
-          ..where((t) => t.saleId.equals(saleId)))
-        .get();
+    return (_db.select(
+      _db.saleItems,
+    )..where((t) => t.saleId.equals(saleId))).get();
   }
 
   Future<String?> getLastInvoiceNumber() async {
-    final last = await (_db.select(_db.sales)
-          ..orderBy([(t) => OrderingTerm.desc(t.id)])
-          ..limit(1))
-        .getSingleOrNull();
+    final last =
+        await (_db.select(_db.sales)
+              ..orderBy([(t) => OrderingTerm.desc(t.id)])
+              ..limit(1))
+            .getSingleOrNull();
     return last?.invoiceNumber;
   }
 

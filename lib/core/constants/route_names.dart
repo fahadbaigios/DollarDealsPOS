@@ -8,6 +8,7 @@ class RouteNames {
   static const String purchaseDetails = 'purchaseDetails';
   static const String createPurchase = 'createPurchase';
   static const String sales = 'sales';
+  static const String cashDrawer = 'cashDrawer';
   static const String saleDetails = 'saleDetails';
   static const String inventory = 'inventory';
   static const String expenses = 'expenses';
@@ -35,6 +36,7 @@ class RouteNames {
   static const String salesPath = '/sales';
   static const String salesHistoryPath = '/sales?tab=history';
   static const String saleDetailsPath = '/sales/:id';
+  static const String cashDrawerPath = '/cash-drawer';
   static const String inventoryPath = '/inventory';
   static const String expensesPath = '/expenses';
   static const String reportsPath = '/reports';

@@ -203,6 +203,7 @@ class _SalesTable extends StatelessWidget {
               DataColumn(label: Text('Date')),
               DataColumn(label: Text('Customer')),
               DataColumn(label: Text('Cashier')),
+              DataColumn(label: Text('Payment Type')),
               DataColumn(label: Text('Total'), numeric: true),
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Action')),
@@ -214,6 +215,7 @@ class _SalesTable extends StatelessWidget {
                   DataCell(Text(_formatDate(s.saleDate))),
                   DataCell(Text(page.customerNamesBySaleId[s.id] ?? '-')),
                   DataCell(Text(page.cashierNamesBySaleId[s.id] ?? '-')),
+                  DataCell(Text(page.paymentMethodNamesBySaleId[s.id] ?? '-')),
                   DataCell(Text('PKR ${s.totalAmount.toStringAsFixed(2)}')),
                   DataCell(
                     PaymentStatusBadge(status: s.paymentStatus, compact: true),

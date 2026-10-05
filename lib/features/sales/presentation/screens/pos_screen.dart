@@ -129,6 +129,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       return;
     }
 
+    final paymentMethodId = ref.read(posPaymentMethodIdProvider);
+    if (paymentMethodId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Select a payment method')));
+      return;
+    }
+
     final cashier = await ref.read(currentCashierProvider.future);
     if (cashier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +169,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             items: cart,
             cashierId: cashier.id,
             customerId: ref.read(posCustomerIdProvider),
-            paymentMethodId: ref.read(posPaymentMethodIdProvider),
+            paymentMethodId: paymentMethodId,
             orderDiscount: ref.read(posOrderDiscountProvider),
             paidAmount: paid,
             allowNegativeStock: prefs.allowNegativeStock,

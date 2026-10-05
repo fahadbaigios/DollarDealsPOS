@@ -39,6 +39,11 @@ class AppShell extends StatelessWidget {
       path: RouteNames.salesPath,
     ),
     SidebarItemModel(
+      label: 'Cash Drawer',
+      icon: Icons.account_balance_wallet_outlined,
+      path: RouteNames.cashDrawerPath,
+    ),
+    SidebarItemModel(
       label: 'Inventory',
       icon: Icons.warehouse_outlined,
       path: RouteNames.inventoryPath,

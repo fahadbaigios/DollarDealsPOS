@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../database/app_database.dart';
 import '../../../../database/database_constants.dart';
+import '../../../cash_drawer/domain/cash_drawer_constants.dart';
 import '../../data/repositories/sales_repository.dart';
 import '../models/cart_item.dart';
 
@@ -49,7 +50,7 @@ class SalesCheckoutService {
     required List<CartItem> items,
     required int cashierId,
     int? customerId,
-    int? paymentMethodId,
+    required int paymentMethodId,
     double orderDiscount = 0,
     double paidAmount = 0,
     String? notes,
@@ -64,6 +65,13 @@ class SalesCheckoutService {
     if (orderDiscount < 0) {
       throw ArgumentError('Order discount cannot be negative');
     }
+    final paymentMethod = await (_db.select(
+      _db.paymentMethods,
+    )..where((t) => t.id.equals(paymentMethodId))).getSingleOrNull();
+    if (paymentMethod == null || !paymentMethod.isActive) {
+      throw ArgumentError('Select a valid payment method');
+    }
+    final isCashSale = paymentMethod.name.trim().toLowerCase() == 'cash';
 
     if (!allowNegativeStock) {
       await validateStock(items);
@@ -80,6 +88,9 @@ class SalesCheckoutService {
     }
 
     final totalAmount = subtotal - orderDiscount + totalTax;
+    if (totalAmount < 0) {
+      throw ArgumentError('Order total cannot be negative');
+    }
     final dueAmount = (totalAmount - paidAmount).clamp(0.0, double.infinity);
     final paymentStatus = computePaymentStatus(totalAmount, paidAmount);
 
@@ -92,9 +103,7 @@ class SalesCheckoutService {
           .insert(
             SalesCompanion.insert(
               cashierId: cashierId,
-              paymentMethodId: paymentMethodId == null
-                  ? const Value.absent()
-                  : Value(paymentMethodId),
+              paymentMethodId: Value(paymentMethodId),
               customerId: customerId == null
                   ? const Value.absent()
                   : Value(customerId),
@@ -112,6 +121,20 @@ class SalesCheckoutService {
                   : Value(notes.trim()),
             ),
           );
+
+      if (isCashSale && totalAmount > 0) {
+        await _db
+            .into(_db.cashDrawerMovements)
+            .insert(
+              CashDrawerMovementsCompanion.insert(
+                movementType: CashDrawerMovementTypes.cashSale,
+                amountMinor: (totalAmount * 100).round(),
+                saleId: Value(saleId),
+                note: Value(invoice),
+                createdAt: Value(saleDate),
+              ),
+            );
+      }
 
       for (final item in items) {
         await _db
